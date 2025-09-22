@@ -1,0 +1,119 @@
+name,source
+HR,BFi
+Amplitude,BFi
+Systolic time,BFi
+Diastolic Time,BFi
+Td*Ts,BFi
+(Ts/Td)/HR,BFi
+Slope,BFi
+Ts*HR,BFi
+Time MSP - Foot,BFi
+Time MSP - Peak,BFi
+MSP time ratio,BFi
+50HM,BFi
+Systolic Area,BFi
+Diastolic Area,BFi
+Area Ratio,BFi
+Time delay between finger BFi and PPG,BFi&PPG
+Time delay between wrist and finger PPG,BFi&PPG
+Time delay between wrist BFi and finger BFi,BFi&PPG
+Time delay between wrist BFi and finger PPG,BFi&PPG
+Td BFi * Ts PPG,BFi&PPG
+Ts BFi * Ts PPG,BFi&PPG
+THR,BFi
+SHR,BFi
+TSHR,BFi
+TH Amp,BFi
+SH Amp,BFi
+FH Amp,BFi
+25HM,BFi
+75HM,BFi
+SH phase - FH phase,BFi
+TH phase - FH phase,BFi
+TH phase - SH phase,BFi
+FH phase PPG finger - FH phase BFi finger,BFi&PPG
+FH phase PPG wrist - FH phase BFi wrist,BFi&PPG
+FH phase BFi finger- FH phase BFi wrist,BFi&PPG
+FH phase PPG wrist- FH phase BFi finger,BFi&PPG
+FH phase BFi wrist- FH phase PPG finger,BFi&PPG
+FH phase PPG wrist- FH phase PPG finger,BFi&PPG
+Time delay between wrist BFi and wrist PPG,BFi&PPG
+Time delay between finger BFi and wrist PPG,BFi&PPG
+HR,BFi
+Amplitude,BFi
+Systolic time,BFi
+Diastolic Time,BFi
+Td*Ts,BFi
+(Ts/Td)/HR,BFi
+Slope,BFi
+Ts*HR,BFi
+Time MSP - Foot,BFi
+Time MSP - Peak,BFi
+MSP time ratio,BFi
+50HM,BFi
+Systolic Area,BFi
+Diastolic Area,BFi
+Area Ratio,BFi
+THR,BFi
+SHR,BFi
+TSHR,BFi
+TH Amp,BFi
+SH Amp,BFi
+FH Amp,BFi
+25HM,BFi
+75HM,BFi
+SH phase - FH phase,BFi
+TH phase - FH phase,BFi
+TH phase - SH phase,BFi
+HR,PPG
+Amplitude,PPG
+Systolic time,PPG
+Diastolic Time,PPG
+Td*Ts,PPG
+(Ts/Td)/HR,PPG
+Slope,PPG
+Ts*HR,PPG
+Time MSP - Foot,PPG
+Time MSP - Peak,PPG
+MSP time ratio,PPG
+50HM,PPG
+Systolic Area,PPG
+Diastolic Area,PPG
+Area Ratio,PPG
+THR,PPG
+SHR,PPG
+TSHR,PPG
+TH Amp,PPG
+SH Amp,PPG
+FH Amp,PPG
+25HM,PPG
+75HM,PPG
+SH phase - FH phase,PPG
+TH phase - FH phase,PPG
+TH phase - SH phase,PPG
+HR,PPG
+Amplitude,PPG
+Systolic time,PPG
+Diastolic Time,PPG
+Td*Ts,PPG
+(Ts/Td)/HR,PPG
+Slope,PPG
+Ts*HR,PPG
+Time MSP - Foot,PPG
+Time MSP - Peak,PPG
+MSP time ratio,PPG
+50HM,PPG
+Systolic Area,PPG
+Diastolic Area,PPG
+Area Ratio,PPG
+THR,PPG
+SHR,PPG
+TSHR,PPG
+TH Amp,PPG
+SH Amp,PPG
+FH Amp,PPG
+25HM,PPG
+75HM,PPG
+SH phase - FH phase,PPG
+TH phase - FH phase,PPG
+TH phase - SH phase,PPG

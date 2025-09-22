@@ -1,0 +1,10 @@
+# temp folder and files
+**/temp/
+**/temp.*
+
+# compile file
+**/.asv
+**/__pycache__/
+**/.idea/
+**/.vscode/
+**/.DS_Store
