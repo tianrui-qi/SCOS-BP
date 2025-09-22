@@ -1,0 +1,12 @@
+name: SCOS-BP
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - jupyter=1.1.1
+  - tqdm=4.67.1
+  - pandas=2.3.2
+  - matplotlib=3.10.6
+  - numpy=2.3.3
+  - scikit-learn=1.7.2
+  - scipy=1.16.2
