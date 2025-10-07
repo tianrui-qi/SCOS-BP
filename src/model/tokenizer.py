@@ -15,4 +15,4 @@ class Tokenizer:
         # still functions when there is nan in the input
         return x.unfold(    # (B, C, T) -> (B, C, L, S)
             dimension=2, size=self.segment_length, step=self.segment_stride
-        )
+        ).contiguous()
