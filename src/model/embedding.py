@@ -57,8 +57,7 @@ class EmbeddingToken(torch.nn.Module):
             self.nan_emb.expand_as(x), x,
         )
 
-        if mlm_mask is None or mlm_mode is None or mlm_rand is None or \
-        self.training is False:
+        if mlm_mask is None or mlm_mode is None or mlm_rand is None:
             return x        # (B, C, L, D)
 
         # make a clone before applying masking since when applying random
