@@ -1,0 +1,32 @@
+{
+    "data": {
+        "x_load_path": "C:/Users/tianrui/iCloudDrive/Research/RoblyerLab/data/waveform/x.pt",
+        "y_load_path": "C:/Users/tianrui/iCloudDrive/Research/RoblyerLab/data/waveform/y.pt",
+        "profile_load_path": "C:/Users/tianrui/iCloudDrive/Research/RoblyerLab/data/waveform/profile.csv",
+        "p_nan": 0.002,
+        "batch_size": 256,
+        "num_workers": 8
+    },
+    "model": {
+        "D": 256,
+        "S": 20,
+        "stride": 10,
+        "C_max": 8,
+        "L_max": 1024,
+        "num_layers": 4,
+        "nhead": 8,
+        "dim_feedforward": 1024,
+        "out_dim": 2
+    },
+    "runner": {
+        "lr": 0.01
+    },
+    "trainer": {
+        "max_epochs": 800,
+        "log_save_fold": "log/",
+        "log_every_n_steps": 1,
+        "ckpt_save_fold": "ckpt/",
+        "monitor": "valid/loss_mask",
+        "save_top_k": 10
+    }
+}
