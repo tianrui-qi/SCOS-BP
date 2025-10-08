@@ -19,8 +19,7 @@ class Pretrain(lightning.LightningModule):
         # calculate loss only on masked tokens
         loss = torch.nn.functional.mse_loss(x[mask], y[mask])
         self.log(
-            "Pretrain/train/loss", loss, 
-            on_step=True, on_epoch=True, logger=True, prog_bar=True
+            "train/loss_mask", loss, on_step=True, on_epoch=True, logger=True
         )
         return loss
 
@@ -31,8 +30,7 @@ class Pretrain(lightning.LightningModule):
         )
         loss = torch.nn.functional.mse_loss(x[mask], y[mask])
         self.log(
-            "Pretrain/valid/loss-mask", loss, 
-            on_epoch=True, logger=True, prog_bar=True
+            "valid/loss_mask", loss, on_epoch=True, logger=True
         )
         x, channel_idx, _ = batch   # (B, C, T), (B, C), (B, out_dim)
         x, y, _ = self.model(       # (B, C, T), (B, C, T), None
@@ -40,8 +38,7 @@ class Pretrain(lightning.LightningModule):
         )
         loss = torch.nn.functional.mse_loss(x, y)
         self.log(
-            "Pretrain/valid/loss-all", loss, 
-            on_epoch=True, logger=True, prog_bar=True
+            "valid/loss_all", loss, on_epoch=True, logger=True
         )
 
     def test_step(self, batch, batch_idx):
@@ -51,8 +48,7 @@ class Pretrain(lightning.LightningModule):
         )
         loss = torch.nn.functional.mse_loss(x[mask], y[mask])
         self.log(
-            "Pretrain/valid/loss-mask", loss, 
-            on_epoch=True, logger=True, prog_bar=True
+            "test/loss_mask", loss, on_epoch=True, logger=True,
         )
         x, channel_idx, _ = batch   # (B, C, T), (B, C), (B, out_dim)
         x, y, _ = self.model(       # (B, C, T), (B, C, T), None
@@ -60,8 +56,7 @@ class Pretrain(lightning.LightningModule):
         )
         loss = torch.nn.functional.mse_loss(x, y)
         self.log(
-            "Pretrain/valid/loss-all", loss, 
-            on_epoch=True, logger=True, prog_bar=True
+            "test/loss_all", loss, on_epoch=True, logger=True,
         )
 
     def configure_optimizers(self):

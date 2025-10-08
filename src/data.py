@@ -8,24 +8,24 @@ __all__ = ["DataModule"]
 
 class DataModule(lightning.LightningDataModule):
     def __init__(
-        self, x_path: str, y_path: str, profile_path: str,
+        self, x_load_path: str, y_load_path: str, profile_load_path: str,
         p_nan: float, batch_size: int, num_workers: int,
     ) -> None:
         super().__init__()
-        self.x_path = x_path
-        self.y_path = y_path
-        self.profile_path = profile_path
+        self.x_load_path = x_load_path
+        self.y_load_path = y_load_path
+        self.profile_load_path = profile_load_path
         self.p_nan = p_nan
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = torch.cuda.is_available()
         self.persistent_workers = self.num_workers > 0
 
-    def setup(self, stage=None):
+    def setup(self, stage=None) -> None:
         # load
-        x = torch.load(self.x_path)
-        y = torch.load(self.y_path)
-        profile = pd.read_csv(self.profile_path)
+        x = torch.load(self.x_load_path, weights_only=True)
+        y = torch.load(self.y_load_path, weights_only=True)
+        profile = pd.read_csv(self.profile_load_path)
         # split
         split = profile["pretrain"].to_numpy()
         tr = torch.as_tensor(split == 0, dtype=torch.bool)
@@ -42,7 +42,7 @@ class DataModule(lightning.LightningDataModule):
             x[te], y[te], shuffle_channel=False, p_nan=0
         )
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> torch.utils.data.DataLoader:
         return torch.utils.data.DataLoader(
             self.train_dataset, shuffle=True, 
             batch_size=self.batch_size, num_workers=self.num_workers, 
@@ -50,7 +50,7 @@ class DataModule(lightning.LightningDataModule):
             persistent_workers=self.persistent_workers
         )
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> torch.utils.data.DataLoader:
         return torch.utils.data.DataLoader(
             self.val_dataset, shuffle=False, 
             batch_size=self.batch_size, num_workers=self.num_workers, 
@@ -58,7 +58,7 @@ class DataModule(lightning.LightningDataModule):
             persistent_workers=self.persistent_workers
         )
 
-    def test_dataloader(self):
+    def test_dataloader(self) -> torch.utils.data.DataLoader:
         return torch.utils.data.DataLoader(
             self.test_dataset, shuffle=False, 
             batch_size=self.batch_size, num_workers=self.num_workers, 
@@ -71,12 +71,12 @@ class Dataset(torch.utils.data.Dataset):
     def __init__(
         self, x: torch.Tensor, y: torch.Tensor,
         shuffle_channel: bool = False, p_nan: float = 0.0,
-    ):
+    ) -> None:
         self.x, self.y = x, y   # (N, C, T), (N, out_dim)
         self.shuffle_channel = shuffle_channel
         self.p_nan = p_nan
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.x)
 
     def __getitem__(
