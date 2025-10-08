@@ -37,7 +37,7 @@ df.to_csv(os.path.join(data_path, 'profile.csv'), index=False)
 
 # store data[0] and data[1] as torch tensors
 torch.save(
-    torch.from_numpy(data[0]).to(torch.float), 
+    torch.from_numpy(data[0]).to(torch.float).transpose(-1, -2), 
     os.path.join(data_path, 'x.pt')
 )
 torch.save(
