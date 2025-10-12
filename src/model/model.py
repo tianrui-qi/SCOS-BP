@@ -35,7 +35,7 @@ class SCOST(torch.nn.Module):
         channel_idx: torch.Tensor,  # (B, C)
         mask: bool = False, 
         task: Literal["regression", "reconstruction"] = "regression"
-    ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
+    ) -> tuple[torch.Tensor, torch.Tensor | None]:
         token = self.tokenizer.forward(x)   # (B, C, T) -> (B, C, L, S)
         if mask: 
             mlm_mask, mlm_mode, mlm_rand = self.masking(token)
@@ -52,14 +52,14 @@ class SCOST(torch.nn.Module):
             x = self.head_reconstruction(x)
             x = x.reshape((B, C, L, token.shape[-1]))
             if mask:
-                # (B, C, L, S), (B, C, L, S), (B, C, L)
-                return x, token, mlm_mask
+                # (num of masked tokens, S), (num of masked tokens, S)
+                return x[mlm_mask], token[mlm_mask].detach()
             else:
                 x = self.tokenizer.backward(x)
                 token = self.tokenizer.backward(token)
-                # (B, C, T), (B, C, T), None
-                return x, token, None
+                # (B, C, T), (B, C, T)
+                return x, token.detach()
         elif task == "regression":
             x = self.head_regression(x)
-            # (B, out_dim), None, None
-            return x, None, None
+            # (B, out_dim), None
+            return x, None

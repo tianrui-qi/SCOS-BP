@@ -17,11 +17,11 @@ class Pretrain(lightning.LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, channel_idx, _ = batch   # (B, C, T), (B, C), (B, out_dim)
-        x, y, mask = self.model(    # (B, C, L, S), (B, C, L, S), (B, C, L)
+        x, y = self.model(          # (B, C, L, S), (B, C, L, S), (B, C, L)
             x, channel_idx, mask=True, task="reconstruction"
         )
         # calculate loss only on masked tokens
-        loss = torch.nn.functional.mse_loss(x[mask], y[mask])
+        loss = torch.nn.functional.mse_loss(x, y)
         self.log(
             "train/loss_mask", loss, on_step=True, on_epoch=True, logger=True
         )
@@ -29,15 +29,15 @@ class Pretrain(lightning.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x, channel_idx, _ = batch   # (B, C, T), (B, C), (B, out_dim)
-        x, y, mask = self.model(    # (B, C, L, S), (B, C, L, S), (B, C, L)
+        x, y = self.model(          # (B, C, L, S), (B, C, L, S), (B, C, L)
             x, channel_idx, mask=True, task="reconstruction"
         )
-        loss = torch.nn.functional.mse_loss(x[mask], y[mask])
+        loss = torch.nn.functional.mse_loss(x, y)
         self.log(
             "valid/loss_mask", loss, on_epoch=True, logger=True
         )
         x, channel_idx, _ = batch   # (B, C, T), (B, C), (B, out_dim)
-        x, y, _ = self.model(       # (B, C, T), (B, C, T), None
+        x, y = self.model(          # (B, C, T), (B, C, T), None
             x, channel_idx, mask=False, task="reconstruction"
         )
         loss = torch.nn.functional.mse_loss(x, y)
@@ -47,15 +47,15 @@ class Pretrain(lightning.LightningModule):
 
     def test_step(self, batch, batch_idx):
         x, channel_idx, _ = batch   # (B, C, T), (B, C), (B, out_dim)
-        x, y, mask = self.model(    # (B, C, L, S), (B, C, L, S), (B, C, L)
+        x, y = self.model(          # (B, C, L, S), (B, C, L, S), (B, C, L)
             x, channel_idx, mask=True, task="reconstruction"
         )
-        loss = torch.nn.functional.mse_loss(x[mask], y[mask])
+        loss = torch.nn.functional.mse_loss(x, y)
         self.log(
             "test/loss_mask", loss, on_epoch=True, logger=True,
         )
         x, channel_idx, _ = batch   # (B, C, T), (B, C), (B, out_dim)
-        x, y, _ = self.model(       # (B, C, T), (B, C, T), None
+        x, y = self.model(          # (B, C, T), (B, C, T), None
             x, channel_idx, mask=False, task="reconstruction"
         )
         loss = torch.nn.functional.mse_loss(x, y)
