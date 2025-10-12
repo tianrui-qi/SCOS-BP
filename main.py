@@ -24,7 +24,7 @@ def main(cfg_load_path: str) -> None:
     # trainer
     logger = lightning.pytorch.loggers.TensorBoardLogger(
         save_dir=cfg["trainer"]["log_save_fold"],
-        name=cfg_load_path.split("/")[-1].split(".")[0],
+        name=cfg_load_path.split("/")[-1].split(".")[0], 
         version="",
     )
     checkpoint = lightning.pytorch.callbacks.ModelCheckpoint(
@@ -32,8 +32,8 @@ def main(cfg_load_path: str) -> None:
             cfg["trainer"]["ckpt_save_fold"], 
             cfg_load_path.split("/")[-1].split(".")[0]
         ),
-        monitor=cfg["trainer"]["monitor"],
-        save_top_k=cfg["trainer"]["save_top_k"],
+        monitor=cfg["trainer"]["monitor"], 
+        save_top_k=cfg["trainer"]["save_top_k"], 
         save_last=True,
     )
     lrmonitor = lightning.pytorch.callbacks.LearningRateMonitor(
@@ -43,7 +43,7 @@ def main(cfg_load_path: str) -> None:
         logger=logger,
         callbacks=[checkpoint, lrmonitor],
         max_epochs=cfg["trainer"]["max_epochs"],
-        log_every_n_steps=cfg["trainer"]["log_every_n_steps"],
+        log_every_n_steps=1,
     )
     # fit
     trainer.fit(runner, datamodule=data)

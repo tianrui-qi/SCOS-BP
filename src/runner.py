@@ -6,10 +6,14 @@ __all__ = ["Pretrain"]
 
 
 class Pretrain(lightning.LightningModule):
-    def __init__(self, model: torch.nn.Module, lr: float) -> None:
+    def __init__(
+        self, model: torch.nn.Module, lr: float, step_size: int, gamma: float
+    ) -> None:
         super().__init__()
         self.model = model
         self.lr = lr
+        self.step_size = step_size
+        self.gamma = gamma
 
     def training_step(self, batch, batch_idx):
         x, channel_idx, _ = batch   # (B, C, T), (B, C), (B, out_dim)
@@ -61,7 +65,7 @@ class Pretrain(lightning.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(
-            optimizer, gamma=0.95
+        scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=self.step_size, gamma=self.gamma
         )
         return [optimizer], [scheduler]

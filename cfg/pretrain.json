@@ -3,7 +3,9 @@
         "x_load_path": "C:/Users/tianrui/iCloudDrive/Research/RoblyerLab/data/waveform/x.pt",
         "y_load_path": "C:/Users/tianrui/iCloudDrive/Research/RoblyerLab/data/waveform/y.pt",
         "profile_load_path": "C:/Users/tianrui/iCloudDrive/Research/RoblyerLab/data/waveform/profile.csv",
-        "p_nan": 0.002,
+        "shuffle_channel_order": true,
+        "shuffle_channel_num": false,
+        "p_nan": 0,
         "batch_size": 256,
         "num_workers": 8
     },
@@ -13,18 +15,20 @@
         "stride": 10,
         "C_max": 8,
         "L_max": 1024,
+        "dropout": 0.1,
         "num_layers": 4,
         "nhead": 8,
         "dim_feedforward": 1024,
         "out_dim": 2
     },
     "runner": {
-        "lr": 0.01
+        "lr": 0.001,
+        "step_size": 10,
+        "gamma": 0.95
     },
     "trainer": {
         "max_epochs": 800,
         "log_save_fold": "log/",
-        "log_every_n_steps": 1,
         "ckpt_save_fold": "ckpt/",
         "monitor": "valid/loss_mask",
         "save_top_k": 10
