@@ -14,13 +14,16 @@ __all__ = ["SCOST"]
 
 class SCOST(torch.nn.Module):
     def __init__(
-        self, D: int, S: int, stride: int, C_max: int, L_max: int,
-        num_layers: int, nhead: int, dim_feedforward: int, out_dim: int = 2,
+        self, D: int, S: int, stride: int, 
+        C_max: int, L_max: int, dropout: float,
+        num_layers: int, nhead: int, dim_feedforward: int, out_dim: int,
     ) -> None:
         super().__init__()
         self.tokenizer = Tokenizer(S, stride)
         self.masking = Masking()
-        self.embedding: torch.nn.Module = Embedding(D, S, C_max, L_max)
+        self.embedding: torch.nn.Module = Embedding(
+            D, S, C_max, L_max, dropout
+        )
         self.transformer: torch.nn.Module = Transformer(
             D, num_layers, nhead, dim_feedforward
         )
@@ -39,7 +42,7 @@ class SCOST(torch.nn.Module):
         else:
             mlm_mask, mlm_mode, mlm_rand = None, None, None
         # (B, C, L, S) -> (B, C, L, D)
-        x = self.embedding(token, channel_idx, mlm_mask, mlm_mode, mlm_rand)                           
+        x = self.embedding(token, channel_idx, mlm_mask, mlm_mode, mlm_rand)
         B, C, L, D = x.shape
         x = x.reshape((B, C*L, D))  # (B, C, L, D) -> (B, C*L, D)
         x = self.transformer(x)     # (B, C*L, D) -> (B, C*L, D)

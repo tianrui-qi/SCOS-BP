@@ -9,13 +9,19 @@ __all__ = ["DataModule"]
 class DataModule(lightning.LightningDataModule):
     def __init__(
         self, x_load_path: str, y_load_path: str, profile_load_path: str,
-        p_nan: float, batch_size: int, num_workers: int,
+        shuffle_channel_order: bool, shuffle_channel_num: bool, p_nan: float, 
+        batch_size: int, num_workers: int,
     ) -> None:
         super().__init__()
+        # load
         self.x_load_path = x_load_path
         self.y_load_path = y_load_path
         self.profile_load_path = profile_load_path
+        # dataset
+        self.shuffle_channel_order = shuffle_channel_order
+        self.shuffle_channel_num = shuffle_channel_num
         self.p_nan = p_nan
+        # dataloader
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.pin_memory = torch.cuda.is_available()
@@ -33,14 +39,13 @@ class DataModule(lightning.LightningDataModule):
         te = torch.as_tensor(split == 2, dtype=torch.bool)
         # dataset
         self.train_dataset = Dataset(
-            x[tr], y[tr], shuffle_channel=True, p_nan=self.p_nan
+            x[tr], y[tr], 
+            shuffle_channel_order=self.shuffle_channel_order, 
+            shuffle_channel_num=self.shuffle_channel_num,
+            p_nan=self.p_nan
         )
-        self.val_dataset = Dataset(
-            x[va], y[va], shuffle_channel=False, p_nan=0
-        )
-        self.test_dataset = Dataset(
-            x[te], y[te], shuffle_channel=False, p_nan=0
-        )
+        self.val_dataset   = Dataset(x[va], y[va])
+        self.test_dataset  = Dataset(x[te], y[te])
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
         return torch.utils.data.DataLoader(
@@ -69,11 +74,14 @@ class DataModule(lightning.LightningDataModule):
 
 class Dataset(torch.utils.data.Dataset):
     def __init__(
-        self, x: torch.Tensor, y: torch.Tensor,
-        shuffle_channel: bool = False, p_nan: float = 0.0,
+        self, x: torch.Tensor, y: torch.Tensor, 
+        shuffle_channel_order: bool = False, 
+        shuffle_channel_num: bool = False,
+        p_nan: float = 0.0,
     ) -> None:
         self.x, self.y = x, y   # (N, C, T), (N, out_dim)
-        self.shuffle_channel = shuffle_channel
+        self.shuffle_channel_order = shuffle_channel_order
+        self.shuffle_channel_num = shuffle_channel_num
         self.p_nan = p_nan
 
     def __len__(self) -> int:
@@ -85,10 +93,13 @@ class Dataset(torch.utils.data.Dataset):
         x = self.x[i]
         channel_idx = torch.arange(len(x))
         y = self.y[i]
-        # if shuffle_channel, randomly permute the channel dimension
-        if self.shuffle_channel:
+        # if shuffle_channel_order, randomly permute the channel dimension
+        if self.shuffle_channel_order:
             channel_idx = channel_idx[torch.randperm(len(x))]
             x = x[channel_idx]
+        # TODO: if shuffle_channel_num, randomly select a subset of channels
+        if self.shuffle_channel_num:
+            pass
         # if p_nan > 0, randomly set some value to nan
         if self.p_nan > 0:
             p_nan = torch.rand((), device=x.device) * self.p_nan
