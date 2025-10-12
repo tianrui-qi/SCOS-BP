@@ -9,9 +9,7 @@ class HeadReconstruction(torch.nn.Module):
         super().__init__()
         self.rh = torch.nn.Sequential(
             torch.nn.LayerNorm(D), 
-            torch.nn.Linear(D, 2*D), 
-            torch.nn.GELU(), 
-            torch.nn.Linear(2*D, S)
+            torch.nn.Linear(D, S), 
         )
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.rh(x)   # (B, C*L, D) -> (B, C*L, S)
