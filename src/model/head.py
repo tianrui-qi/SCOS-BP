@@ -16,14 +16,11 @@ class HeadReconstruction(torch.nn.Module):
 
 
 class HeadRegression(torch.nn.Module):
-    def __init__(self, D: int, out_dim=2) -> None:
+    def __init__(self, D: int, out_dim = 2) -> None:
         super().__init__()
         self.mlp = torch.nn.Sequential(
             torch.nn.LayerNorm(D), 
-            torch.nn.Linear(D, 2*D), 
-            torch.nn.GELU(), 
-            torch.nn.Dropout(0.1), 
-            torch.nn.Linear(2*D, out_dim)
+            torch.nn.Linear(D, out_dim)
         )
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.mean(dim=1)   # (B, C*L, D) -> (B, D)

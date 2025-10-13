@@ -17,8 +17,10 @@ class SCOST(torch.nn.Module):
         self, D: int, S: int, stride: int, 
         C_max: int, L_max: int, dropout: float,
         num_layers: int, nhead: int, dim_feedforward: int, out_dim: int,
+        freeze_embedding: bool = False, freeze_transformer: int = 0, **kwargs
     ) -> None:
         super().__init__()
+        # modules
         self.tokenizer = Tokenizer(S, stride)
         self.masking = Masking()
         self.embedding: torch.nn.Module = Embedding(
@@ -29,6 +31,18 @@ class SCOST(torch.nn.Module):
         )
         self.head_reconstruction: torch.nn.Module = HeadReconstruction(D, S)
         self.head_regression: torch.nn.Module = HeadRegression(D, out_dim)
+        # freeze
+        self._freeze(freeze_embedding, freeze_transformer)
+
+    def _freeze(self, freeze_embedding: bool, freeze_transformer: int) -> None:
+        if freeze_embedding:
+            for param in self.embedding.parameters():
+                param.requires_grad = False
+        if freeze_transformer > 0:
+            for i, layer in enumerate(self.transformer.encoder.layers):
+                if i < freeze_transformer:
+                    for param in layer.parameters():
+                        param.requires_grad = False
 
     def forward(
         self, x: torch.Tensor,      # (B, C, T)

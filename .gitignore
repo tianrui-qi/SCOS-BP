@@ -1,6 +1,6 @@
-/ckpt/
 /data/
 /log/
+/ckpt/
 
 # temp folder and files
 **/temp/
