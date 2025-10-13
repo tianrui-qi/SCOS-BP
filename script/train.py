@@ -14,26 +14,26 @@ torch.set_float32_matmul_precision("medium")
 lightning.seed_everything(42, workers=True, verbose=False)
 
 
-def main(cfg_load_path: str) -> None:
-    # cfg
-    with open(cfg_load_path, "r") as f: cfg = json.load(f)
+def main(config_load_path: str) -> None:
+    # config
+    with open(config_load_path, "r") as f: config = json.load(f)
     # src
-    data = src.data.DataModule(**cfg["data"])
-    model = src.model.SCOST(**cfg["model"])
-    runner = src.runner.Pretrain(model=model, **cfg["runner"])
+    data = src.data.DataModule(**config["data"])
+    model = src.model.SCOST(**config["model"])
+    runner = src.runner.Pretrain(model=model, **config["runner"])
     # trainer
     logger = lightning.pytorch.loggers.TensorBoardLogger(
-        save_dir=cfg["trainer"]["log_save_fold"],
-        name=cfg_load_path.split("/")[-1].split(".")[0], 
+        save_dir=config["trainer"]["log_save_fold"],
+        name=config_load_path.split("/")[-1].split(".")[0], 
         version="",
     )
     checkpoint = lightning.pytorch.callbacks.ModelCheckpoint(
         dirpath=os.path.join(
-            cfg["trainer"]["ckpt_save_fold"], 
-            cfg_load_path.split("/")[-1].split(".")[0]
+            config["trainer"]["ckpt_save_fold"], 
+            config_load_path.split("/")[-1].split(".")[0]
         ),
-        monitor=cfg["trainer"]["monitor"], 
-        save_top_k=cfg["trainer"]["save_top_k"], 
+        monitor=config["trainer"]["monitor"], 
+        save_top_k=config["trainer"]["save_top_k"], 
         save_last=True,
     )
     lrmonitor = lightning.pytorch.callbacks.LearningRateMonitor(
@@ -42,7 +42,7 @@ def main(cfg_load_path: str) -> None:
     trainer = lightning.Trainer(
         logger=logger,
         callbacks=[checkpoint, lrmonitor],
-        max_epochs=cfg["trainer"]["max_epochs"],
+        max_epochs=config["trainer"]["max_epochs"],
         log_every_n_steps=1,
     )
     # fit

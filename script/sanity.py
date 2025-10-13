@@ -17,22 +17,22 @@ def main():
     ap.add_argument("--step", type=int, default=4000)
     args = ap.parse_args()
 
-    # cfg
-    with open("cfg/pretrain.json", "r") as f: cfg = json.load(f)
-    cfg["data"]["batch_size"] = 16  # small batch for debugging
+    # config
+    with open("config/pretrain.json", "r") as f: config = json.load(f)
+    config["data"]["batch_size"] = 16  # small batch for debugging
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # data, fixed at first batch
-    dm = src.data.DataModule(**cfg["data"])
+    dm = src.data.DataModule(**config["data"])
     dm.setup()
     x, ch, _ = next(iter(dm.train_dataloader()))
     x = x.to(device)
     ch = ch.to(device)
     # model
-    model = src.model.SCOST(**cfg["model"]).to(device)
+    model = src.model.SCOST(**config["model"]).to(device)
 
     # train
     model.train()
-    opt = torch.optim.Adam(model.parameters(), lr=cfg["runner"]["lr"])
+    opt = torch.optim.Adam(model.parameters(), lr=config["runner"]["lr"])
     for step in range(args.step):
         opt.zero_grad(set_to_none=True)
 
