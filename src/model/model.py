@@ -15,7 +15,7 @@ __all__ = ["SCOST"]
 class SCOST(torch.nn.Module):
     def __init__(
         self, D: int, S: int, stride: int, 
-        C_max: int, L_max: int, dropout: float,
+        C_max: int, L_max: int,
         num_layers: int, nhead: int, dim_feedforward: int, out_dim: int,
         freeze_embedding: bool = False, freeze_transformer: int = 0, **kwargs
     ) -> None:
@@ -23,9 +23,7 @@ class SCOST(torch.nn.Module):
         # modules
         self.tokenizer = Tokenizer(S, stride)
         self.masking = Masking()
-        self.embedding: torch.nn.Module = Embedding(
-            D, S, C_max, L_max, dropout
-        )
+        self.embedding: torch.nn.Module = Embedding(D, S, C_max, L_max)
         self.transformer: torch.nn.Module = Transformer(
             D, num_layers, nhead, dim_feedforward
         )
