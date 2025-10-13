@@ -16,27 +16,27 @@
         "stride": 10,
         "C_max": 8,
         "L_max": 1024,
-        "dropout": 0.1,
+        "dropout": 0.05,
         "num_layers": 4,
         "nhead": 8,
         "dim_feedforward": 1024,
         "out_dim": 2,
-        "freeze_embedding": false,
-        "freeze_transformer": 0
+        "freeze_embedding": true,
+        "freeze_transformer": 2
     },
     "runner": {
-        "class": "Pretrain",
+        "class": "Finetune",
         "lr": 0.001,
-        "step_size": 10,
+        "step_size": 15,
         "gamma": 0.95
     },
     "trainer": {
-        "max_epochs": 800,
+        "max_epochs": 1000,
         "log_save_fold": "log/",
         "ckpt_save_fold": "ckpt/",
         "monitor": "loss/valid",
-        "save_top_k": 10,
-        "ckpt_load_path": null,
+        "save_top_k": 5,
+        "ckpt_load_path": "ckpt/pretrain/epoch=731-step=32940.ckpt",
         "resume": false
     }
 }
