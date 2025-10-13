@@ -16,7 +16,6 @@
         "stride": 10,
         "C_max": 8,
         "L_max": 1024,
-        "dropout": 0.05,
         "num_layers": 4,
         "nhead": 8,
         "dim_feedforward": 1024,
