@@ -9,7 +9,7 @@ __all__ = ["DataModule"]
 class DataModule(lightning.LightningDataModule):
     def __init__(
         self, x_load_path: str, y_load_path: str, profile_load_path: str,
-        shuffle_channel_order: bool, shuffle_channel_num: bool, p_nan: float, 
+        channel_perm: bool, channel_drop: bool, p_nan: float, 
         batch_size: int, num_workers: int,
     ) -> None:
         super().__init__()
@@ -18,8 +18,8 @@ class DataModule(lightning.LightningDataModule):
         self.y_load_path = y_load_path
         self.profile_load_path = profile_load_path
         # dataset
-        self.shuffle_channel_order = shuffle_channel_order
-        self.shuffle_channel_num = shuffle_channel_num
+        self.channel_perm = channel_perm
+        self.channel_drop = channel_drop
         self.p_nan = p_nan
         # dataloader
         self.batch_size = batch_size
@@ -40,8 +40,7 @@ class DataModule(lightning.LightningDataModule):
         # dataset
         self.train_dataset = Dataset(
             x[tr], y[tr], 
-            shuffle_channel_order=self.shuffle_channel_order, 
-            shuffle_channel_num=self.shuffle_channel_num,
+            channel_perm=self.channel_perm, channel_drop=self.channel_drop,
             p_nan=self.p_nan
         )
         self.val_dataset   = Dataset(x[va], y[va])
@@ -75,13 +74,12 @@ class DataModule(lightning.LightningDataModule):
 class Dataset(torch.utils.data.Dataset):
     def __init__(
         self, x: torch.Tensor, y: torch.Tensor, 
-        shuffle_channel_order: bool = False, 
-        shuffle_channel_num: bool = False,
+        channel_perm: bool = False, channel_drop: bool = False, 
         p_nan: float = 0.0,
     ) -> None:
         self.x, self.y = x, y   # (N, C, T), (N, out_dim)
-        self.shuffle_channel_order = shuffle_channel_order
-        self.shuffle_channel_num = shuffle_channel_num
+        self.channel_perm = channel_perm
+        self.channel_drop = channel_drop
         self.p_nan = p_nan
 
     def __len__(self) -> int:
@@ -90,17 +88,32 @@ class Dataset(torch.utils.data.Dataset):
     def __getitem__(
         self, i: int
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        x = self.x[i]
-        channel_idx = torch.arange(len(x))
-        y = self.y[i]
-        # if shuffle_channel_order, randomly permute the channel dimension
-        if self.shuffle_channel_order:
-            channel_idx = channel_idx[torch.randperm(len(x))]
-            x = x[channel_idx]
-        # TODO: if shuffle_channel_num, randomly select a subset of channels
-        if self.shuffle_channel_num:
-            pass
-        # if p_nan > 0, randomly set some value to nan
+        x = self.x[i].clone()
+        channel_idx = torch.arange(len(x), device=x.device, dtype=torch.long)
+        y = self.y[i].clone()
+        # if channel_perm, randomly shuffle channels order
+        if self.channel_perm:
+            perm = torch.randperm(len(channel_idx), device=x.device)
+            x, channel_idx = x[perm], channel_idx[perm]
+        # if channel_drop, randomly drop some channels by setting channel
+        # index to -1 and setting corresponding x to nan; keep at least one 
+        # channel
+        if self.channel_drop:
+            valid_mask = channel_idx != -1
+            valid_idx = torch.where(valid_mask)[0]
+            # randomly keep k number of channels
+            k = torch.randint(1, len(valid_idx)+1, (1,), device=x.device).item()
+            perm = torch.randperm(len(valid_idx), device=x.device)
+            keep_idx = valid_idx[perm][:k]
+            # drop channels that valid but not keep
+            drop_mask = torch.zeros_like(channel_idx, dtype=torch.bool)
+            drop_mask[valid_idx] = True
+            drop_mask[keep_idx] = False
+            # update x and channel_idx
+            x[drop_mask] = float("nan")
+            channel_idx[drop_mask] = -1
+        # if self.p_nan > 0, select a probability between [0, self.p_nan) and 
+        # drop each value to nan with that probability
         if self.p_nan > 0:
             p_nan = torch.rand((), device=x.device) * self.p_nan
             x = x.masked_fill(torch.rand_like(x) < p_nan, float('nan'))
