@@ -1,6 +1,5 @@
 import torch
 import lightning
-import pandas as pd
 
 
 __all__ = ["DataModule"]
@@ -8,7 +7,7 @@ __all__ = ["DataModule"]
 
 class DataModule(lightning.LightningDataModule):
     def __init__(
-        self, x_load_path: str, y_load_path: str, profile_load_path: str,
+        self, x_load_path: str, y_load_path: str, split_load_path: str,
         channel_perm: bool, channel_drop: bool,
         batch_size: int, num_workers: int,
     ) -> None:
@@ -16,7 +15,7 @@ class DataModule(lightning.LightningDataModule):
         # load
         self.x_load_path = x_load_path
         self.y_load_path = y_load_path
-        self.profile_load_path = profile_load_path
+        self.split_load_path = split_load_path
         # dataset
         self.channel_perm = channel_perm
         self.channel_drop = channel_drop
@@ -30,9 +29,8 @@ class DataModule(lightning.LightningDataModule):
         # load
         x = torch.load(self.x_load_path, weights_only=True)
         y = torch.load(self.y_load_path, weights_only=True)
-        profile = pd.read_csv(self.profile_load_path)
+        split = torch.load(self.split_load_path, weights_only=True)
         # split
-        split = profile["pretrain"].to_numpy()
         tr = torch.as_tensor(split == 0, dtype=torch.bool)
         va = torch.as_tensor(split == 1, dtype=torch.bool)
         te = torch.as_tensor(split == 2, dtype=torch.bool)

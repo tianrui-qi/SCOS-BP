@@ -6,7 +6,7 @@ class Config:
         self.data = {
             "x_load_path"       : "data/waveform/x.pt",
             "y_load_path"       : "data/waveform/y.pt",
-            "profile_load_path" : "data/waveform/profile.csv",
+            "split_load_path"   : "data/waveform/split.pt",
             "channel_perm"      : True,
             "channel_drop"      : True,
             "batch_size"        : 256,
