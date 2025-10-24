@@ -3,7 +3,7 @@ import torch
 from typing import Literal
 
 
-__all__ = []
+__all__ = ["Masking"]
 
 
 class Masking:

@@ -1,7 +1,7 @@
 import torch
 
 
-__all__ = []
+__all__ = ["Embedding"]
 
 
 class Embedding(torch.nn.Module):
