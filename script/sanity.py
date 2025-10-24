@@ -1,7 +1,6 @@
 import torch
 import lightning
 
-import json
 import argparse
 import matplotlib.pyplot as plt
 
@@ -14,34 +13,35 @@ lightning.seed_everything(42, workers=True, verbose=False)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--step", type=int, default=4000)
+    ap.add_argument("--step", type=int, default=8000)
     args = ap.parse_args()
 
     # config
-    with open("config/pretrain.json", "r") as f: config = json.load(f)
-    config["data"]["batch_size"] = 16  # small batch for debugging
+    config = src.config.Config()
+    config.data["batch_size"] = 8           # small batch for debugging
+    config.data["channel_perm"] = False     # no channel perm for debugging
+    config.data["channel_drop"] = False     # no channel drop for debugging
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # data, fixed at first batch
-    dm = src.data.DataModule(**config["data"])
+    dm = src.data.DataModule(**config.data)
     dm.setup()
     x, ch, _ = next(iter(dm.train_dataloader()))
     x = x.to(device)
     ch = ch.to(device)
     # model
-    model = src.model.SCOST(**config["model"]).to(device)
+    model = src.model.SCOST(**config.model).to(device)
 
     # train
     model.train()
-    opt = torch.optim.Adam(model.parameters(), lr=config["runner"]["lr"])
+    opt = torch.optim.Adam(model.parameters(), lr=config.runner["lr"])
     for step in range(args.step):
         opt.zero_grad(set_to_none=True)
-
-        pred, token = model(x, ch, mask=True, task="reconstruction")
+        pred, token = model(
+            x, ch, masking_type="reconstruction", head_type="reconstruction"
+        )
         loss = torch.nn.functional.mse_loss(pred, token)
-
         loss.backward()
         opt.step()
-
         if step % 50 != 0 and step != args.step - 1: continue
         print(" | ".join([
             f"step={step:04d}", 
@@ -52,7 +52,7 @@ def main():
     # eval
     model.eval()
     with torch.no_grad():
-        x, y = model(x, ch, mask=False, task="reconstruction")
+        x, y = model(x, ch, head_type="reconstruction")
     plt.subplot(3, 1, 1)
     plt.plot(x[0, 0].cpu())
     plt.plot(y[0, 0].cpu())
