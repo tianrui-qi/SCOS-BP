@@ -9,7 +9,7 @@ __all__ = ["DataModule"]
 class DataModule(lightning.LightningDataModule):
     def __init__(
         self, x_load_path: str, y_load_path: str, profile_load_path: str,
-        channel_perm: bool, channel_drop: bool, p_nan: float, 
+        channel_perm: bool, channel_drop: bool,
         batch_size: int, num_workers: int,
     ) -> None:
         super().__init__()
@@ -20,7 +20,6 @@ class DataModule(lightning.LightningDataModule):
         # dataset
         self.channel_perm = channel_perm
         self.channel_drop = channel_drop
-        self.p_nan = p_nan
         # dataloader
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -41,7 +40,6 @@ class DataModule(lightning.LightningDataModule):
         self.train_dataset = Dataset(
             x[tr], y[tr], 
             channel_perm=self.channel_perm, channel_drop=self.channel_drop,
-            p_nan=self.p_nan
         )
         self.val_dataset   = Dataset(x[va], y[va])
         self.test_dataset  = Dataset(x[te], y[te])
@@ -75,12 +73,10 @@ class Dataset(torch.utils.data.Dataset):
     def __init__(
         self, x: torch.Tensor, y: torch.Tensor, 
         channel_perm: bool = False, channel_drop: bool = False, 
-        p_nan: float = 0.0,
     ) -> None:
         self.x, self.y = x, y   # (N, C, T), (N, out_dim)
         self.channel_perm = channel_perm
         self.channel_drop = channel_drop
-        self.p_nan = p_nan
 
     def __len__(self) -> int:
         return len(self.x)
@@ -112,9 +108,12 @@ class Dataset(torch.utils.data.Dataset):
             # update x and channel_idx
             x[drop_mask] = float("nan")
             channel_idx[drop_mask] = -1
+        # after chat with Ariane 23 Oct 2025, we remove this logic since nan 
+        # value exist for quality control, not on waveform; there is a qc score
+        # for each pulse and it will be nan if the pulse does not pass qc. 
         # if self.p_nan > 0, select a probability between [0, self.p_nan) and 
         # drop each value to nan with that probability
-        if self.p_nan > 0:
-            p_nan = torch.rand((), device=x.device) * self.p_nan
-            x = x.masked_fill(torch.rand_like(x) < p_nan, float('nan'))
+        # if self.p_nan > 0:
+        #     p_nan = torch.rand((), device=x.device) * self.p_nan
+        #     x = x.masked_fill(torch.rand_like(x) < p_nan, float('nan'))
         return x, channel_idx, y

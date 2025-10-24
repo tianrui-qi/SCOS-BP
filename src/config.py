@@ -9,7 +9,6 @@ class Config:
             "profile_load_path": "data/waveform/profile.csv",
             "channel_perm": True,
             "channel_drop": True,
-            "p_nan": 0.005,
             "batch_size": 256,
             "num_workers": 8
         }
