@@ -1,7 +1,11 @@
 import torch
 
 
-__all__ = []
+__all__ = [
+    "HeadContrastive",
+    "HeadReconstruction",
+    "HeadRegression"
+]
 
 
 class HeadContrastive(torch.nn.Module):

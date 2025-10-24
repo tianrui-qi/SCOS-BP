@@ -1,7 +1,7 @@
 import torch
 
 
-__all__ = []
+__all__ = ["Transformer"]
 
 
 class Transformer(torch.nn.Module):
