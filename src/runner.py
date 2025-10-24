@@ -7,8 +7,10 @@ __all__ = ["Runner"]
 
 class Runner(lightning.LightningModule):
     def __init__(
-        self, model: torch.nn.Module, weight: list[float],
-        T: float, lr: float, step_size: int, gamma: float, **kwargs
+        self, model: torch.nn.Module, 
+        weight: list[float], T: float, 
+        lr: float, step_size: int, gamma: float, 
+        **kwargs
     ) -> None:
         super().__init__()
         self.model = model
@@ -19,77 +21,28 @@ class Runner(lightning.LightningModule):
         self.gamma = gamma
 
     def training_step(self, batch, batch_idx):
-        loss1 = self._step_reconstruction(batch)
-        loss2 = self._step_contrastive(batch)
-        loss3 = self._step_regression(batch)
-        loss4 = self._step_regression_mask(batch)
-        # total loss
-        loss = torch.stack([loss1, loss2, loss3, loss4])
-        weights = torch.as_tensor(self.weight, device=loss1.device)
-        loss = (loss * weights).sum()
-        # log
-        self.log(
-            "loss/train", loss, on_step=False, on_epoch=True, logger=True
-        )
-        self.log(
-            "loss_reconstruction/train", loss1, 
-            on_step=False, on_epoch=True, logger=True
-        )
-        self.log(
-            "loss_contrastive/train", loss2, 
-            on_step=False, on_epoch=True, logger=True
-        )
-        self.log(
-            "loss_regression/train", loss3, 
-            on_step=False, on_epoch=True, logger=True
-        )
-        self.log(
-            "loss_regression_mask/train", loss4, 
-            on_step=False, on_epoch=True, logger=True
-        )
-        return loss
+        return self._step(batch, stage='train')
     
     def validation_step(self, batch, batch_idx):
-        loss1 = self._step_reconstruction(batch)
-        loss2 = self._step_contrastive(batch)
-        loss3 = self._step_regression(batch)
-        loss4 = self._step_regression_mask(batch)
+        return self._step(batch, stage='valid')
+
+    def _step(self, batch, stage):
+        # loss for each task
+        loss1 = self._stepContrastive(batch, stage)
+        loss2 = self._stepReconstruction(batch, stage)
+        loss3 = self._stepRegression(batch, stage)
         # total loss
-        loss = torch.stack([loss1, loss2, loss3, loss4])
+        loss = torch.stack([loss1, loss2, loss3])
         weights = torch.as_tensor(self.weight, device=loss1.device)
         loss = (loss * weights).sum()
         # log
         self.log(
-            "loss/valid", loss, on_step=False, on_epoch=True, logger=True
-        )
-        self.log(
-            "loss_reconstruction/valid", loss1, 
-            on_step=False, on_epoch=True, logger=True
-        )
-        self.log(
-            "loss_contrastive/valid", loss2, 
-            on_step=False, on_epoch=True, logger=True
-        )
-        self.log(
-            "loss_regression/valid", loss3, 
-            on_step=False, on_epoch=True, logger=True
-        )
-        self.log(
-            "loss_regression_mask/valid", loss4, 
+            f"loss/{stage}", loss, 
             on_step=False, on_epoch=True, logger=True
         )
         return loss
 
-    def _step_reconstruction(self, batch):
-        x, channel_idx, y = batch   # (B, C, T), (B, C), (B, out_dim)
-        x, y = self.model(          # (#mask, S), (#mask, S)
-            x, channel_idx,
-            masking_type="reconstruction", head_type="reconstruction",
-        )
-        loss = torch.nn.functional.mse_loss(x, y)
-        return loss
-    
-    def _step_contrastive(self, batch):
+    def _stepContrastive(self, batch, stage):
         x, channel_idx, y = batch   # (B, C, T), (B, C), (B, out_dim)
         x_pred, _ = self.model(     # (B, D), None
             x, channel_idx,
@@ -109,24 +62,36 @@ class Runner(lightning.LightningModule):
             torch.nn.functional.cross_entropy(logits_op, labels) +
             torch.nn.functional.cross_entropy(logits_po, labels)
         ) * 0.5
+        self.log(
+            f"loss/contrastive/{stage}", loss,
+            on_step=False, on_epoch=True, logger=True
+        )
         return loss
 
-    def _step_regression(self, batch):
+    def _stepReconstruction(self, batch, stage):
         x, channel_idx, y = batch   # (B, C, T), (B, C), (B, out_dim)
-        x, _ = self.model(          # (B, out_dim), None
+        x, y = self.model(          # (#mask, S), (#mask, S)
             x, channel_idx,
-            masking_type=None, head_type="regression",
+            masking_type="reconstruction", head_type="reconstruction",
         )
         loss = torch.nn.functional.mse_loss(x, y)
+        self.log(
+            f"loss/reconstruction/{stage}", loss, 
+            on_step=False, on_epoch=True, logger=True
+        )
         return loss
 
-    def _step_regression_mask(self, batch):
+    def _stepRegression(self, batch, stage):
         x, channel_idx, y = batch   # (B, C, T), (B, C), (B, out_dim)
         x, _ = self.model(          # (B, out_dim), None
             x, channel_idx,
             masking_type="contrastive", head_type="regression",
         )
         loss = torch.nn.functional.mse_loss(x, y)
+        self.log(
+            f"loss/regression/{stage}", loss, 
+            on_step=False, on_epoch=True, logger=True
+        )
         return loss
 
     def configure_optimizers(self):

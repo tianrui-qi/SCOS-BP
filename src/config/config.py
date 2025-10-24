@@ -25,7 +25,7 @@ class Config:
             "freeze_transformer": 0
         }
         self.runner = {
-            "weight"            : [0.8, 0.2, 0.0, 0.0],
+            "weight"            : [0.2, 0.8, 0.0],
             "T"                 : 0.2,
             "lr"                : 0.005,
             "step_size"         : 20,
