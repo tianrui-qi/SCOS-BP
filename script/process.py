@@ -13,13 +13,16 @@ def main(data_fold: str ='data/waveform/') -> None:
     # create profile
     df_sample, df_subject = createProfile(data)
     # split, update profile in-place
-    split(df_sample, df_subject, name='split', ratio=(0.5, 0.2, 0.3))
+    split01(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split01')
+    split02(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split02')
     # save profile
     df_sample.to_csv(os.path.join(data_fold, 'sample.csv'), index=False)
     df_subject.to_csv(os.path.join(data_fold, 'subject.csv'), index=False)
     # save split as torch tensor
-    s = torch.as_tensor(df_sample['split'].to_numpy(), dtype=torch.long)
-    torch.save(s, os.path.join(data_fold, 'split.pt'))
+    s01 = torch.as_tensor(df_sample['split01'].to_numpy(), dtype=torch.long)
+    torch.save(s01, os.path.join(data_fold, 'split01.pt'))
+    s02 = torch.as_tensor(df_sample['split02'].to_numpy(), dtype=torch.long)
+    torch.save(s02, os.path.join(data_fold, 'split02.pt'))
     # save data[0] waveform and data[1] bp as torch tensors
     x = torch.from_numpy(data[0]).to(torch.float).transpose(-1, -2)
     y = torch.from_numpy(data[1]).to(torch.float)
@@ -72,11 +75,10 @@ def createProfile(data: np.ndarray) -> tuple[pd.DataFrame, pd.DataFrame]:
     return df_sample, df_subject
 
 
-def split(
+def split01(
     df_sample: pd.DataFrame, df_subject: pd.DataFrame,  # update in-place
-    name: str = 'split', 
     ratio: tuple[float, float, float] = (0.5, 0.15, 0.35), 
-    seed: int = 42, iters: int = 2000,
+    name: str = 'split01', seed: int = 42, iters: int = 2000,
 ) -> None:
     """
     Assign each subject to train/valid/test (0/1/2) such that:
@@ -170,16 +172,129 @@ def split(
 
     # map back to sample level
     mapping = {
-        row['subject']: row['split'] for _, row in df_subject.iterrows()
+        row['subject']: row[name] for _, row in df_subject.iterrows()
     }
     df_sample[name] = df_sample['subject'].map(mapping)
 
     # print number of samples per split
-    for s, name in enumerate(['train','valid','test']):
+    print(name)
+    for s, n in enumerate(['train','valid','test']):
         total_len = int(
-            df_subject.loc[df_subject['split']==s, 'length'].sum()
+            df_subject.loc[df_subject[name]==s, 'length'].sum()
         )
-        print(f"number of samples in {name}:\t{total_len}")
+        print(f"number of samples in {n}:\t{total_len}")
+
+
+def split02(
+    df_sample: pd.DataFrame, df_subject: pd.DataFrame,  # updated in place
+    ratio: tuple[float, float, float] = (0.5, 0.15, 0.35), 
+    name: str = "split02", seed: int = 42,
+) -> None:
+    """
+    Per-subject & per-condition splitting.
+
+    For each subject and each condition:
+      - Split all samples of that condition across splits according to ratio.
+      - Ensure each condition appears in as many splits as possible
+        (ideally all three if enough samples exist).
+      - We ignore 'health', 'system', and 'repeat' here.
+    
+    After splitting:
+      - df_sample[name]: 0(train), 1(valid), 2(test)
+      - df_subject[name]: all -1 (since every subject appears in all splits)
+    """
+    rng = np.random.default_rng(seed)
+    k = 3
+    weight = np.asarray(ratio, dtype=float)
+    weight = weight / weight.sum()
+
+    # Initialize the new split column in df_sample
+    if name in df_sample.columns:
+        df_sample.drop(columns=[name], inplace=True)
+    df_sample[name] = -1
+
+    # Group samples by (subject, condition)
+    grouped = df_sample.groupby(["subject", "condition"], sort=False)
+
+    for (subject, cond), idx_frame in grouped:
+        idx = idx_frame.index.to_numpy()
+        n = len(idx)
+        if n == 0:
+            continue
+
+        # Compute ideal counts for each split based on ratio
+        ideal = n * weight
+        base = np.floor(ideal).astype(int)
+        remain = n - base.sum()
+        if remain > 0:
+            # Distribute remaining samples to splits with largest fractional 
+            # parts
+            frac = ideal - base
+            order = np.argsort(-frac)
+            base[order[:remain]] += 1
+        counts = base.copy()
+
+        # Ensure that at least min(n, k) splits receive at least one sample
+        need_cover = min(n, k)
+        zeros = np.where(counts == 0)[0].tolist()
+        nonzero = np.where(counts > 0)[0].tolist()
+
+        # If not enough splits are nonzero, move 1 sample from a large split 
+        # to an empty one
+        while len(nonzero) < need_cover:
+            if not zeros:
+                # No zero splits left but still not enough coverage → break
+                break
+            target = zeros.pop(0)
+            donor = int(np.argmax(counts))
+            if counts[donor] <= 1:
+                break
+            counts[donor] -= 1
+            counts[target] += 1
+            nonzero = np.where(counts > 0)[0].tolist()
+
+        # Assign samples to splits according to counts
+        rng.shuffle(idx)
+        start = 0
+        for split_id in range(k):
+            c = int(counts[split_id])
+            if c <= 0:
+                continue
+            sel = idx[start:start + c]
+            df_sample.loc[sel, name] = split_id
+            start += c
+
+        # Fallback: if any samples are still unassigned, put them into the 
+        # smallest split
+        if (df_sample.loc[idx, name] < 0).any():
+            leftover_mask = df_sample.loc[idx, name] < 0
+            cur_counts = np.array([
+                (df_sample.loc[idx, name] == s).sum() for s in range(k)
+            ])
+            target_split = int(np.argmin(cur_counts))
+            df_sample.loc[
+                idx[leftover_mask.to_numpy().nonzero()[0]], name
+            ] = target_split
+
+    # At subject level, set split02 = -1 because every subject appears in 
+    # all splits
+    df_subject[name] = -1
+
+    # print number of samples per split
+    print(name)
+    for s, n in enumerate(['train','valid','test']):
+        total_len = int(
+            (df_sample[name]==s).sum()
+        )
+        print(f"number of samples in {n}:\t{total_len}")
+    # for subject in df_sample["subject"].unique():
+    #     sub_df = df_sample[df_sample["subject"] == subject]
+    #     total = len(sub_df)
+    #     counts = [(sub_df[name] == s).sum() for s in range(k)]
+    #     print(
+    #         f"Subject {subject}:\ttotal={total}\t"
+    #         f"split0={counts[0]}\tsplit1={counts[1]}\tsplit2={counts[2]}"
+    #     )
 
 
 if __name__ == "__main__": main()
