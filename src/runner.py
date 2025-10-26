@@ -6,16 +6,28 @@ __all__ = ["Runner"]
 
 
 class Runner(lightning.LightningModule):
+    weight: torch.Tensor
+
     def __init__(
         self, model: torch.nn.Module, 
-        weight: list[float], T: float, 
+        enable: list[bool], weight: list[float], T: float, 
         lr: float, step_size: int, gamma: float, 
         **kwargs
     ) -> None:
         super().__init__()
+        # model
         self.model = model
-        self.weight = weight
+        # loss
+        self.register_buffer("weight", torch.tensor(
+            [w for w, e in zip(weight, enable) if e], dtype=torch.float
+        ))
+        self.task = [f for f, e in zip([
+            self._stepContrastive,
+            self._stepReconstruction,
+            self._stepRegression,
+        ], enable) if e]
         self.T = T
+        # optimizer
         self.lr = lr
         self.step_size = step_size
         self.gamma = gamma
@@ -27,14 +39,12 @@ class Runner(lightning.LightningModule):
         return self._step(batch, stage='valid')
 
     def _step(self, batch, stage):
-        # loss for each task
-        loss1 = self._stepContrastive(batch, stage)
-        loss2 = self._stepReconstruction(batch, stage)
-        loss3 = self._stepRegression(batch, stage)
-        # total loss
-        loss = torch.stack([loss1, loss2, loss3])
-        weights = torch.as_tensor(self.weight, device=loss1.device)
-        loss = (loss * weights).sum()
+        loss = [f(batch, stage) for f in self.task]
+        loss = torch.stack([
+            l.detach() if w == 0 else l 
+            for l, w in zip(loss, self.weight)
+        ])
+        loss = torch.dot(loss, self.weight)
         # log
         self.log(
             f"loss/{stage}", loss, 
