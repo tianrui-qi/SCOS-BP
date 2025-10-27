@@ -15,16 +15,36 @@ lightning.seed_everything(42, workers=True, verbose=False)
 
 
 def main() -> None:
-    # config
     args = getArgs()
-    config: src.config.Config = getattr(src.config, args.config)()
+    for name in args.config: train(getattr(src.config, name)())
+
+
+def getArgs():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--config", type=str, nargs="+", required=True, dest="config",
+        choices=[
+            name for name, obj in inspect.getmembers(src.config) 
+            if inspect.isclass(obj) 
+            and issubclass(obj, src.config.Config) 
+            and obj is not src.config.Config
+        ],
+    )
+    args = parser.parse_args()
+    return args
+
+
+def train(config: src.config.Config) -> None:
+    name = config.__class__.__name__
     # data
     data = src.data.DataModule(**config.data)
     # model
     model = src.model.SCOST(**config.model)
     if not config.trainer["resume"] and \
     config.trainer["ckpt_load_path"] is not None:
-        ckpt = torch.load(config.trainer["ckpt_load_path"], weights_only=True)
+        ckpt = torch.load(
+            config.trainer["ckpt_load_path"], weights_only=True
+        )
         state_dict = {
             k.replace("model.", ""): v for k, v in ckpt["state_dict"].items()
             if k.startswith("model.")
@@ -34,12 +54,10 @@ def main() -> None:
     runner = src.runner.Runner(model=model, **config.runner)
     # trainer
     logger = lightning.pytorch.loggers.TensorBoardLogger(
-        save_dir=config.trainer["log_save_fold"],
-        name=args.config,
-        version="",
+        save_dir=config.trainer["log_save_fold"], name=name, version="",
     )
     checkpoint = lightning.pytorch.callbacks.ModelCheckpoint(
-        dirpath=os.path.join(config.trainer["ckpt_save_fold"], args.config),
+        dirpath=os.path.join(config.trainer["ckpt_save_fold"], name),
         monitor=config.trainer["monitor"],
         save_top_k=config.trainer["save_top_k"],
         save_last=True,
@@ -60,21 +78,6 @@ def main() -> None:
         ckpt_path=config.trainer["ckpt_load_path"] 
         if config.trainer["resume"] else None
     )
-
-
-def getArgs():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-config", type=str, required=True, dest="config",
-        choices=[
-            name for name, obj in inspect.getmembers(src.config) 
-            if inspect.isclass(obj) 
-            and issubclass(obj, src.config.Config) 
-            and obj is not src.config.Config
-        ],
-    )
-    args = parser.parse_args()
-    return args
 
 
 if __name__ == "__main__": main()
