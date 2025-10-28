@@ -27,6 +27,7 @@ def main() -> None:
             "loss/reconstruction/train" : "loss/reconstruction",
             "loss/contrastive/train"    : "loss/contrastive",
             "loss/regression/train"     : "loss/regression",
+            "loss/regression_deep/train": "loss/regression_deep",
             "loss/train"                : "loss",
         }
     )
@@ -36,6 +37,7 @@ def main() -> None:
             "loss/reconstruction/valid" : "loss/reconstruction",
             "loss/contrastive/valid"    : "loss/contrastive",
             "loss/regression/valid"     : "loss/regression",
+            "loss/regression_deep/valid": "loss/regression_deep",
             "loss/valid"                : "loss",
         }
     )
