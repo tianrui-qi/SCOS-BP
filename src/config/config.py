@@ -26,8 +26,8 @@ class Config:
         }
         self.runner = {
             # loss
-            "enable"            : [True, True, True],
-            "weight"            : [0.2, 0.8, 0.0],
+            "enable"            : [True, True, False, False],
+            "weight"            : [ 0.2,  0.8,   0.0,   0.0],
             "T"                 : 0.2,
             # optimizer
             "lr"                : 0.005,

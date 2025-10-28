@@ -6,7 +6,8 @@ from .tokenizer import Tokenizer
 from .masking import Masking
 from .embedding import Embedding
 from .transformer import Transformer
-from .head import HeadContrastive, HeadReconstruction, HeadRegression
+from .head import \
+    HeadContrastive, HeadReconstruction, HeadRegression, HeadRegressionDeep
 
 
 __all__ = ["SCOST"]
@@ -31,6 +32,7 @@ class SCOST(torch.nn.Module):
         self.head_contrastive = HeadContrastive(D)
         self.head_reconstruction = HeadReconstruction(D, S)
         self.head_regression = HeadRegression(D, out_dim=out_dim)
+        self.head_regression_deep = HeadRegressionDeep(D, out_dim=out_dim)
         # freeze
         self._freeze(freeze_embedding, freeze_transformer)
 
@@ -53,13 +55,14 @@ class SCOST(torch.nn.Module):
         masking_type: Literal["contrastive", "reconstruction"] | None = None,
         pool: bool = True,
         head_type: Literal[
-            "contrastive", "reconstruction", "regression"
+            "contrastive", "reconstruction", "regression", "regression_deep"
         ] | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
         # override pool if head_type is given
         if head_type == "contrastive":    pool = True
         if head_type == "reconstruction": pool = False
         if head_type == "regression":     pool = True
+        if head_type == "regression_deep":pool = True
         # tokenizing
         x = self.tokenizer.forward(x)   # (B, C, L, S)
         y = x.detach()                  # (B, C, L, S)
@@ -95,4 +98,7 @@ class SCOST(torch.nn.Module):
             return x, y     # (#mask, S), (#mask, S) or (B, C, T), (B, C, T)
         if head_type == "regression":
             x = self.head_regression(x)
+            return x, None  # (B, out_dim), None
+        if head_type == "regression_deep":
+            x = self.head_regression_deep(x)
             return x, None  # (B, out_dim), None
