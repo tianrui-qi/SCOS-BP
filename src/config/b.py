@@ -3,7 +3,6 @@ from .config import Config
 
 __all__ = [
     "ConfigB10", "ConfigB11", 
-    "ConfigB12", 
     "ConfigB13", "ConfigB14", "ConfigB15", "ConfigB16", "ConfigB17",
     "ConfigB18", "ConfigB19", "ConfigB20", "ConfigB21",
     "ConfigB22", 
@@ -15,7 +14,7 @@ class ConfigB01(Config):
     def __init__(self):
         super().__init__()
         self.data["split_load_path"] = "data/waveform/split01.pt"
-        # [Contrastive, Reconstruction, Regression]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner["enable"] = [True, True, True]
         self.runner["weight"] = [ 0.2,  0.8,  0.0]
         self.runner["lr"] = 0.001
@@ -30,11 +29,10 @@ much on reconstruction.
 
 
 class ConfigB02(Config):
-
     def __init__(self):
         super().__init__()
         self.data["split_load_path"] = "data/waveform/split01.pt"
-        # [Contrastive, Reconstruction, Regression]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner["enable"] = [True, True, True]
         self.runner["weight"] = [ 0.5,  0.5,  0.0]
         self.runner["lr"] = 0.0005
@@ -62,7 +60,7 @@ class ConfigB03(Config):
         self.data["split_load_path"] = "data/waveform/split01.pt"
         self.model["freeze_embedding"] = True
         self.model["freeze_transformer"] = 4
-        # [Contrastive, Reconstruction, Regression]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner["enable"] = [True, True, True]
         self.runner["weight"] = [ 0.0,  0.0,  1.0]
         self.runner["lr"] = 0.0001
@@ -77,7 +75,7 @@ class ConfigB04(Config):
         self.data["split_load_path"] = "data/waveform/split01.pt"
         self.model["freeze_embedding"] = True
         self.model["freeze_transformer"] = 3
-        # [Contrastive, Reconstruction, Regression]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner["enable"] = [True, True, True]
         self.runner["weight"] = [ 0.0,  0.0,  1.0]
         self.runner["lr"] = 0.0001
@@ -101,7 +99,7 @@ class ConfigB05(Config):
     def __init__(self):
         super().__init__()
         self.data["split_load_path"] = "data/waveform/split02.pt"
-        # [Contrastive, Reconstruction, Regression]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner["enable"] = [True, True, True]
         self.runner["weight"] = [ 0.0,  1.0,  0.0]
         self.trainer["max_epochs"] = 3620
@@ -113,7 +111,7 @@ class ConfigB06(Config):
         self.data["split_load_path"] = "data/waveform/split02.pt"
         self.data["batch_size"] = 1024
         self.data["num_workers"] = 16
-        # [Contrastive, Reconstruction, Regression]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner["enable"] = [False, True, False]
         self.runner["weight"] = [  0.0,  1.0,   0.0]
         self.runner["lr"] = 0.0005
@@ -135,7 +133,7 @@ class ConfigB07(Config):
         self.data["num_workers"] = 16
         self.model["freeze_embedding"] = True
         self.model["freeze_transformer"] = 4
-        # [Contrastive, Reconstruction, Regression]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner["enable"] = [False, False, True]
         self.runner["weight"] = [  0.0,   0.0,  1.0]
         self.trainer["ckpt_load_path"] = \
@@ -150,7 +148,7 @@ class ConfigB08(Config):
         self.data["num_workers"] = 16
         self.model["freeze_embedding"] = True
         self.model["freeze_transformer"] = 3
-        # [Contrastive, Reconstruction, Regression]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner["enable"] = [False, False, True]
         self.runner["weight"] = [  0.0,   0.0,  1.0]
         self.runner["lr"] = 0.001
@@ -167,7 +165,7 @@ class ConfigB09(Config):
         self.data["num_workers"] = 16
         self.model["freeze_embedding"] = True
         self.model["freeze_transformer"] = 2
-        # [Contrastive, Reconstruction, Regression]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner["enable"] = [False, False, True]
         self.runner["weight"] = [  0.0,   0.0,  1.0]
         self.runner["lr"] = 0.001
@@ -187,7 +185,7 @@ want to see how it perform.
 for enable and weight, now we have four tasks and the order is:
 -   Contrastive
 -   Reconstruction
--   Regression
+-   RegressionSingle
 -   RegressionDeep
 """
 
@@ -200,9 +198,9 @@ class ConfigB10(Config):
         self.data["num_workers"] = 16
         self.model["freeze_embedding"] = True
         self.model["freeze_transformer"] = 4
-        # [Contrastive, Reconstruction, Regression, RegressionDeep]
-        self.runner["enable"] = [False, False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,   0.0,  1.0]
+        # [Contrastive, Reconstruction, RegressionDeep]
+        self.runner["enable"] = [False, False, True]
+        self.runner["weight"] = [  0.0,   0.0,  1.0]
         self.runner["lr"] = 0.01
         self.trainer["max_epochs"] = 3195
         self.trainer["ckpt_load_path"] = \
@@ -224,9 +222,9 @@ class ConfigB11(Config):
         self.data["split_load_path"] = "data/waveform/split02.pt"
         self.model["freeze_embedding"] = True
         self.model["freeze_transformer"] = 1
-        # [Contrastive, Reconstruction, Regression, RegressionDeep]
-        self.runner["enable"] = [False, True, False, True]
-        self.runner["weight"] = [  0.0,  1.0,   0.0,  1.0]
+        # [Contrastive, Reconstruction, RegressionDeep]
+        self.runner["enable"] = [False, True, True]
+        self.runner["weight"] = [  0.0,  1.0,  1.0]
         self.trainer["max_epochs"] = 425
         self.trainer["ckpt_load_path"] = \
             "ckpt/ConfigB10/last.ckpt"
@@ -242,15 +240,16 @@ However, we change many setting this time:
 To check which factor cause the improvement, we perform a ablation study.
 """
 
+
 class ConfigB12(Config):
     def __init__(self):
         super().__init__()
         self.data["split_load_path"] = "data/waveform/split02.pt"
         self.model["freeze_embedding"] = True
         self.model["freeze_transformer"] = 1
-        # [Contrastive, Reconstruction, Regression, RegressionDeep]
-        self.runner["enable"] = [False, True, True, False]
-        self.runner["weight"] = [  0.0,  1.0,  1.0,   0.0]
+        # [Contrastive, Reconstruction, RegressionSingle]
+        self.runner["enable"] = [False, True, True]
+        self.runner["weight"] = [  0.0,  1.0,  1.0]
         self.trainer["max_epochs"] = 434
         self.trainer["ckpt_load_path"] = \
             "ckpt/ConfigB08/last.ckpt"
@@ -260,40 +259,40 @@ class ConfigB13(ConfigB11):
     def __init__(self):
         super().__init__()
         self.model["freeze_transformer"] = 1
-        self.runner["enable"] = [False, False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,   0.0,  1.0]
+        self.runner["enable"] = [False, False, True]
+        self.runner["weight"] = [  0.0,   0.0,  1.0]
 
 
 class ConfigB14(ConfigB11):
     def __init__(self):
         super().__init__()
         self.model["freeze_transformer"] = 0
-        self.runner["enable"] = [False, False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,   0.0,  1.0]
+        self.runner["enable"] = [False, False, True]
+        self.runner["weight"] = [  0.0,   0.0,  1.0]
 
 
 class ConfigB15(ConfigB11):
     def __init__(self):
         super().__init__()
         self.model["freeze_transformer"] = 2
-        self.runner["enable"] = [False, False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,   0.0,  1.0]
+        self.runner["enable"] = [False, False, True]
+        self.runner["weight"] = [  0.0,   0.0,  1.0]
         
 
 class ConfigB16(ConfigB11):
     def __init__(self):
         super().__init__()
         self.model["freeze_transformer"] = 3
-        self.runner["enable"] = [False, False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,   0.0,  1.0]
+        self.runner["enable"] = [False, False, True]
+        self.runner["weight"] = [  0.0,   0.0,  1.0]
 
 
 class ConfigB17(ConfigB11):
     def __init__(self):
         super().__init__()
         self.model["freeze_transformer"] = 4
-        self.runner["enable"] = [False, False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,   0.0,  1.0]
+        self.runner["enable"] = [False, False, True]
+        self.runner["weight"] = [  0.0,   0.0,  1.0]
 
 
 """"
@@ -381,9 +380,9 @@ class ConfigB22(Config):
         self.data["split_load_path"] = "data/waveform/split02.pt"
         self.model["freeze_embedding"] = True
         self.model["freeze_transformer"] = 3
-        # [Contrastive, Reconstruction, Regression, RegressionDeep]
-        self.runner["enable"] = [False, False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,   0.0,  1.0]
+        # [Contrastive, Reconstruction, RegressionDeep]
+        self.runner["enable"] = [False, False, True]
+        self.runner["weight"] = [  0.0,   0.0,  1.0]
         self.trainer["ckpt_load_path"] = \
             "ckpt/ConfigB16/last.ckpt"
         self.trainer["resume"] = True
@@ -401,9 +400,9 @@ class ConfigB23(Config):
     def __init__(self):
         super().__init__()
         self.data["split_load_path"] = "data/waveform/split02.pt"
-        # [Contrastive, Reconstruction, Regression, RegressionDeep]
-        self.runner["enable"] = [False, False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,   0.0,  1.0]
+        # [Contrastive, Reconstruction, RegressionDeep]
+        self.runner["enable"] = [False, False, True]
+        self.runner["weight"] = [  0.0,   0.0,  1.0]
         self.trainer["max_epochs"] = 7580
 
 
@@ -411,24 +410,11 @@ class ConfigB24(Config):
     def __init__(self):
         super().__init__()
         self.data["split_load_path"] = "data/waveform/split02.pt"
-        # [Contrastive, Reconstruction, Regression, RegressionDeep]
-        self.runner["enable"] = [False, False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,   0.0,  1.0]
+        # [Contrastive, Reconstruction, RegressionDeep]
+        self.runner["enable"] = [False, False, True]
+        self.runner["weight"] = [  0.0,   0.0,  1.0]
         self.trainer["ckpt_load_path"] = \
             "ckpt/ConfigB23/last.ckpt"
-        
-
-class ConfigB25(Config):
-    def __init__(self):
-        super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
-        # [Contrastive, Reconstruction, Regression, RegressionDeep]
-        self.runner["enable"] = [False, False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,   0.0,  1.0]
-        self.runner["lr"] = 0.0005
-        self.runner["step_size"] = 50
-        self.trainer["ckpt_load_path"] = \
-            "ckpt/ConfigB24/last.ckpt"
 
 
 """

@@ -25,7 +25,6 @@ class Runner(lightning.LightningModule):
             self._stepContrastive,
             self._stepReconstruction,
             self._stepRegression,
-            self._stepRegressionDeep,
         ], enable) if e]
         self.T = T
         # optimizer
@@ -101,20 +100,6 @@ class Runner(lightning.LightningModule):
         loss = torch.nn.functional.mse_loss(x, y)
         self.log(
             f"loss/regression/{stage}", loss, 
-            on_step=False, on_epoch=True, logger=True
-        )
-        return loss
-    
-
-    def _stepRegressionDeep(self, batch, stage):
-        x, channel_idx, y = batch   # (B, C, T), (B, C), (B, out_dim)
-        x, _ = self.model(          # (B, out_dim), None
-            x, channel_idx,
-            masking_type="contrastive", head_type="regression_deep",
-        )
-        loss = torch.nn.functional.mse_loss(x, y)
-        self.log(
-            f"loss/regression_deep/{stage}", loss, 
             on_step=False, on_epoch=True, logger=True
         )
         return loss
