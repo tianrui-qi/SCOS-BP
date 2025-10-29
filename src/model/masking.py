@@ -52,8 +52,8 @@ class Masking:
 
         # random drop channel for each sample, i.e., set channel_idx to -1
         # keep at least one valid channel for each sample
-        # note that drop channel here is different from drop channel in dataset
-        # since contrastive learning needs diverse views
+        # note that drop channel here is different from drop channel in 
+        # dataset since contrastive learning needs diverse views
         valid = channel_idx.ne(-1)
         keep_num = (
             torch.rand(B, device=device) * valid.sum(dim=1).float()
@@ -104,23 +104,25 @@ class Masking:
         channel_idx: torch.Tensor,              # (B, C), long
         src_key_padding_mask: torch.Tensor,     # (B, C, L), bool
         mask: torch.Tensor,                     # (B, C, L), long
-        p_mask_point: float = 0.2, 
-        p_mask_span: tuple[float, float] = (0.1, 0.4),
-        p_hide: float = 0.8, 
-        p_keep: float = 0.2,
+        p_point: float = 0.2, 
+        p_span_small: list[float] = [0.0, 0.5],
+        p_span_large: list[float] = [0.0, 1.0],
+        p_hide: float = 0.9, p_keep: float = 0.1,
         **kwargs
     ) -> None:
         B, C, L = src_key_padding_mask.shape
         device = src_key_padding_mask.device
 
         # src_key_padding_mask already set True for invalid tokens, i.e., nan
-        # we only generate mask on valid tokens and then reconstruct them during
-        # training
+        # we only generate mask on valid tokens and then reconstruct them 
+        # during training
         valid = ~src_key_padding_mask   # (B, C, L)
+        # number of valid channels for each sample
+        num_c = (channel_idx.ne(-1) & valid.any(dim=2)).sum(dim=1)  # (B,)
 
         # for each sample, randomly mask tokens with 0 to p_point_mask ratio
         r = torch.rand((B, C, L), device=device)
-        rand_ratio = torch.rand(B, device=device) * p_mask_point
+        rand_ratio = torch.rand(B, device=device) * p_point
         threshold = rand_ratio.view(B, 1, 1)
         hide = valid & (r < threshold)    # (B, C, L)
         # in case mask is all False, force at lease one True
@@ -137,25 +139,43 @@ class Masking:
         mask[hide] = 1
         mask[keep] = 2
 
-        # for each sample, randomly select one channel to generate span mask
-        # that mask p_span_mask[0] to p_span_mask[1] continuous tokens
-        # note that we may select channel already drop or token already masked 
-        # by point mask above
-        channel = torch.randint(0, C, (B,), device=device)
-        min = int(L * p_mask_span[0])
-        max = int(L * p_mask_span[1])
-        length = torch.randint(min, max + 1, (B,), device=device)
+        # for each sample, randomly select one channel to generate span 
+        # mask that mask p_span_min to p_span_max continuous tokens
+        # only span on valid channels with at least one valid token
+        span_c = channel_idx.ne(-1) & valid.any(dim=2)  # (B, C), bool
+        # only span sample that has candidate channels
+        span_s = span_c.any(dim=1).view(B, 1, 1)        # (B, 1, 1), bool
+        # for each sample, randomly select one condidate channel
+        score = torch.rand(B, C, device=device)
+        score = score.masked_fill(~span_c, float("-inf"))
+        span_c = score.argmax(dim=1)                    # (B,), long
+        span_c = torch.nn.functional.one_hot(           # (B, C, 1), bool
+            span_c, num_classes=C
+        ).bool().unsqueeze(-1)
+        # for each sample, calculate span mask positions
+        # note that we generate span mask for all
+        length_small = torch.randint(
+            round(L * p_span_small[0]), round(L * p_span_small[1]) + 1,
+            (B,), device=device
+        )
+        length_large = torch.randint(
+            round(L * p_span_large[0]), round(L * p_span_large[1]) + 1,
+            (B,), device=device
+        )
+        length = torch.where(num_c > 1, length_large, length_small)
         start = torch.floor(
             torch.rand(B, device=device) * (L - length).clamp(min=1)
         ).long()
         end = (start + length).clamp(max=L)
-        pos = torch.arange(L, device=device).view(1, L)     # (1, L)
-        hide = (pos >= start.view(-1, 1)) & (pos < end.view(-1, 1))
-        hide = hide.unsqueeze(1).expand(-1, C, -1)
-        mask_chan = torch.nn.functional.one_hot(            # (B, C, 1)
-            channel, num_classes=C
-        ).bool().unsqueeze(-1)
-        hide = hide & mask_chan & valid
+        pos = torch.arange(L, device=device).view(1, L)
+        span_t = (pos >= start.view(-1, 1)) & (pos < end.view(-1, 1))
+        span_t = span_t.unsqueeze(1).expand(-1, C, -1)  # (B, C, L), bool
+        # combine
+        # 1. valid token, i.e., ~src_key_padding_mask
+        # 2. token selected to span
+        # 3. channel selected to span
+        # 4. sample selected to span and has candidate channels
+        hide = valid & span_t & span_c & span_s         # (B, C, L)
         # for each sample, choose to hide or keep the span
         keep = hide & (
              torch.rand(B, device=device) < p_keep
@@ -167,7 +187,7 @@ class Masking:
 
 if __name__ == "__main__":
     x = torch.randn(2, 4, 10, 10)
-    channel_idx = torch.tensor([[0, 1, -1, 3], [0, -1, 2, 3]])
+    channel_idx = torch.tensor([[0, 1, -1, 3], [-1, -1, 2, -1]])
     masker = Masking()
     src_key_padding_mask, mask = masker(
         x, channel_idx, masking_type="reconstruction"

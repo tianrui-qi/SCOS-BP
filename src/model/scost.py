@@ -15,7 +15,8 @@ __all__ = ["SCOST"]
 
 class SCOST(torch.nn.Module):
     def __init__(
-        self, D: int, S: int, stride: int, 
+        self, D: int, 
+        S: int, stride: int, 
         C_max: int, L_max: int,
         num_layers: int, nhead: int, dim_feedforward: int,
         out_dim: int = 2,
@@ -24,8 +25,8 @@ class SCOST(torch.nn.Module):
     ) -> None:
         super().__init__()
         # modules
-        self.tokenizer = Tokenizer(S, stride)
-        self.masking = Masking()
+        self.tokenizer = Tokenizer(segment_length=S, segment_stride=stride)
+        self.masking = Masking(**kwargs)
         self.embedding = Embedding(D, S, C_max, L_max)
         self.transformer = Transformer(D, num_layers, nhead, dim_feedforward)
         # head
