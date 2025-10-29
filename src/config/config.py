@@ -14,13 +14,23 @@ class Config:
         }
         self.model = {
             "D"                 : 256,
+            # tokenizer
             "S"                 : 40,
             "stride"            : 20,
+            # masking
+            "p_point"           : 0.2, 
+            "p_span_small"      : [0.0, 0.5],   # channel = 1
+            "p_span_large"      : [0.0, 1.0],   # channel > 1
+            "p_hide"            : 0.9, 
+            "p_keep"            : 0.1,
+            # embedding
             "C_max"             : 8,
             "L_max"             : 1024,
+            # transformer
             "num_layers"        : 4,
             "nhead"             : 8,
             "dim_feedforward"   : 1024,
+            # freeze
             "freeze_embedding"  : False,
             "freeze_transformer": 0
         }

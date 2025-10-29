@@ -1,13 +1,7 @@
 from .config import Config
 
 
-__all__ = [
-    "ConfigB10", "ConfigB11", 
-    "ConfigB13", "ConfigB14", "ConfigB15", "ConfigB16", "ConfigB17",
-    "ConfigB18", "ConfigB19", "ConfigB20", "ConfigB21",
-    "ConfigB22", 
-    "ConfigB23", "ConfigB24",
-]
+__all__ = []
 
 
 class ConfigB01(Config):
