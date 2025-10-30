@@ -7,12 +7,12 @@ __all__ = []
 class ConfigB01(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split01.pt"
+        self.data.split_load_path = "data/waveform/split01.pt"
         # [Contrastive, Reconstruction, RegressionSingle]
-        self.runner["enable"] = [True, True, True]
-        self.runner["weight"] = [ 0.2,  0.8,  0.0]
-        self.runner["lr"] = 0.001
-        self.trainer["max_epochs"] = 4240
+        self.runner.enable = (True, True, True)
+        self.runner.weight = ( 0.2,  0.8,  0.0)
+        self.runner.lr = 0.001
+        self.trainer.max_epochs = 4240
 
 
 """
@@ -25,13 +25,13 @@ much on reconstruction.
 class ConfigB02(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split01.pt"
+        self.data.split_load_path = "data/waveform/split01.pt"
         # [Contrastive, Reconstruction, RegressionSingle]
-        self.runner["enable"] = [True, True, True]
-        self.runner["weight"] = [ 0.5,  0.5,  0.0]
-        self.runner["lr"] = 0.0005
-        self.trainer["max_epochs"] = 4055
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (True, True, True)
+        self.runner.weight = ( 0.5,  0.5,  0.0)
+        self.runner.lr = 0.0005
+        self.trainer.max_epochs = 4055
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB01/last.ckpt"
 
 
@@ -51,30 +51,30 @@ Now, we finetune with regression task.
 class ConfigB03(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split01.pt"
-        self.model["freeze_embedding"] = True
-        self.model["freeze_transformer"] = 4
+        self.data.split_load_path = "data/waveform/split01.pt"
+        self.model.freeze_embedding = True
+        self.model.freeze_transformer = 4
         # [Contrastive, Reconstruction, RegressionSingle]
-        self.runner["enable"] = [True, True, True]
-        self.runner["weight"] = [ 0.0,  0.0,  1.0]
-        self.runner["lr"] = 0.0001
-        self.trainer["max_epochs"] = 2105
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (True, True, True)
+        self.runner.weight = ( 0.0,  0.0,  1.0)
+        self.runner.lr = 0.0001
+        self.trainer.max_epochs = 2105
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB01/epoch=1162-step=46520.ckpt"
 
 
 class ConfigB04(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split01.pt"
-        self.model["freeze_embedding"] = True
-        self.model["freeze_transformer"] = 3
+        self.data.split_load_path = "data/waveform/split01.pt"
+        self.model.freeze_embedding = True
+        self.model.freeze_transformer = 3
         # [Contrastive, Reconstruction, RegressionSingle]
-        self.runner["enable"] = [True, True, True]
-        self.runner["weight"] = [ 0.0,  0.0,  1.0]
-        self.runner["lr"] = 0.0001
-        self.trainer["max_epochs"] = 3470
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (True, True, True)
+        self.runner.weight = ( 0.0,  0.0,  1.0)
+        self.runner.lr = 0.0001
+        self.trainer.max_epochs = 3470
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB03/last.ckpt"
 
 
@@ -92,25 +92,25 @@ and control variables.
 class ConfigB05(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
+        self.data.split_load_path = "data/waveform/split02.pt"
         # [Contrastive, Reconstruction, RegressionSingle]
-        self.runner["enable"] = [True, True, True]
-        self.runner["weight"] = [ 0.0,  1.0,  0.0]
-        self.trainer["max_epochs"] = 3620
+        self.runner.enable = (True, True, True)
+        self.runner.weight = ( 0.0,  1.0,  0.0)
+        self.trainer.max_epochs = 3620
 
 
 class ConfigB06(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
-        self.data["batch_size"] = 1024
-        self.data["num_workers"] = 16
+        self.data.split_load_path = "data/waveform/split02.pt"
+        self.data.batch_size = 1024
+        self.data.num_workers = 16
         # [Contrastive, Reconstruction, RegressionSingle]
-        self.runner["enable"] = [False, True, False]
-        self.runner["weight"] = [  0.0,  1.0,   0.0]
-        self.runner["lr"] = 0.0005
-        self.trainer["max_epochs"] = 4861
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (False, True, False)
+        self.runner.weight = (  0.0,  1.0,   0.0)
+        self.runner.lr = 0.0005
+        self.trainer.max_epochs = 4861
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB05/last.ckpt"
 
 
@@ -122,49 +122,49 @@ After pretrain only with reconstruction, we finetune by regression task.
 class ConfigB07(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
-        self.data["batch_size"] = 1024
-        self.data["num_workers"] = 16
-        self.model["freeze_embedding"] = True
-        self.model["freeze_transformer"] = 4
+        self.data.split_load_path = "data/waveform/split02.pt"
+        self.data.batch_size = 1024
+        self.data.num_workers = 16
+        self.model.freeze_embedding = True
+        self.model.freeze_transformer = 4
         # [Contrastive, Reconstruction, RegressionSingle]
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB06/epoch=1004-step=10050.ckpt"
 
 
 class ConfigB08(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
-        self.data["batch_size"] = 1024
-        self.data["num_workers"] = 16
-        self.model["freeze_embedding"] = True
-        self.model["freeze_transformer"] = 3
+        self.data.split_load_path = "data/waveform/split02.pt"
+        self.data.batch_size = 1024
+        self.data.num_workers = 16
+        self.model.freeze_embedding = True
+        self.model.freeze_transformer = 3
         # [Contrastive, Reconstruction, RegressionSingle]
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
-        self.runner["lr"] = 0.001
-        self.trainer["max_epochs"] = 3205
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
+        self.runner.lr = 0.001
+        self.trainer.max_epochs = 3205
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB07/last.ckpt"
 
 
 class ConfigB09(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
-        self.data["batch_size"] = 1024
-        self.data["num_workers"] = 16
-        self.model["freeze_embedding"] = True
-        self.model["freeze_transformer"] = 2
+        self.data.split_load_path = "data/waveform/split02.pt"
+        self.data.batch_size = 1024
+        self.data.num_workers = 16
+        self.model.freeze_embedding = True
+        self.model.freeze_transformer = 2
         # [Contrastive, Reconstruction, RegressionSingle]
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
-        self.runner["lr"] = 0.001
-        self.trainer["max_epochs"] = 490
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
+        self.runner.lr = 0.001
+        self.trainer.max_epochs = 490
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB08/last.ckpt"
 
 
@@ -187,17 +187,17 @@ for enable and weight, now we have four tasks and the order is:
 class ConfigB10(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
-        self.data["batch_size"] = 1024
-        self.data["num_workers"] = 16
-        self.model["freeze_embedding"] = True
-        self.model["freeze_transformer"] = 4
+        self.data.split_load_path = "data/waveform/split02.pt"
+        self.data.batch_size = 1024
+        self.data.num_workers = 16
+        self.model.freeze_embedding = True
+        self.model.freeze_transformer = 4
         # [Contrastive, Reconstruction, RegressionDeep]
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
-        self.runner["lr"] = 0.01
-        self.trainer["max_epochs"] = 3195
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
+        self.runner.lr = 0.01
+        self.trainer.max_epochs = 3195
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB06/epoch=1004-step=10050.ckpt"
 
 
@@ -213,14 +213,14 @@ to ConfigB09, we open more layers to train.
 class ConfigB11(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
-        self.model["freeze_embedding"] = True
-        self.model["freeze_transformer"] = 1
+        self.data.split_load_path = "data/waveform/split02.pt"
+        self.model.freeze_embedding = True
+        self.model.freeze_transformer = 1
         # [Contrastive, Reconstruction, RegressionDeep]
-        self.runner["enable"] = [False, True, True]
-        self.runner["weight"] = [  0.0,  1.0,  1.0]
-        self.trainer["max_epochs"] = 425
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (False, True, True)
+        self.runner.weight = (  0.0,  1.0,  1.0)
+        self.trainer.max_epochs = 425
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB10/last.ckpt"
 
 
@@ -238,55 +238,55 @@ To check which factor cause the improvement, we perform a ablation study.
 class ConfigB12(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
-        self.model["freeze_embedding"] = True
-        self.model["freeze_transformer"] = 1
+        self.data.split_load_path = "data/waveform/split02.pt"
+        self.model.freeze_embedding = True
+        self.model.freeze_transformer = 1
         # [Contrastive, Reconstruction, RegressionSingle]
-        self.runner["enable"] = [False, True, True]
-        self.runner["weight"] = [  0.0,  1.0,  1.0]
-        self.trainer["max_epochs"] = 434
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (False, True, True)
+        self.runner.weight = (  0.0,  1.0,  1.0)
+        self.trainer.max_epochs = 434
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB08/last.ckpt"
 
 
 class ConfigB13(ConfigB11):
     def __init__(self):
         super().__init__()
-        self.model["freeze_transformer"] = 1
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
+        self.model.freeze_transformer = 1
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
 
 
 class ConfigB14(ConfigB11):
     def __init__(self):
         super().__init__()
-        self.model["freeze_transformer"] = 0
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
+        self.model.freeze_transformer = 0
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
 
 
 class ConfigB15(ConfigB11):
     def __init__(self):
         super().__init__()
-        self.model["freeze_transformer"] = 2
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
-        
+        self.model.freeze_transformer = 2
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
+
 
 class ConfigB16(ConfigB11):
     def __init__(self):
         super().__init__()
-        self.model["freeze_transformer"] = 3
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
+        self.model.freeze_transformer = 3
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
 
 
 class ConfigB17(ConfigB11):
     def __init__(self):
         super().__init__()
-        self.model["freeze_transformer"] = 4
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
+        self.model.freeze_transformer = 4
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
 
 
 """"
@@ -327,29 +327,29 @@ i.e., ConfigB16.
 class ConfigB18(ConfigB16):
     def __init__(self):
         super().__init__()
-        self.data["batch_size"] = 2048
-        self.trainer["max_epochs"] = 500
+        self.data.batch_size = 2048
+        self.trainer.max_epochs = 500
 
 
 class ConfigB19(ConfigB16):
     def __init__(self):
         super().__init__()
-        self.data["batch_size"] = 512
-        self.trainer["max_epochs"] = 500
+        self.data.batch_size = 512
+        self.trainer.max_epochs = 500
 
 
 class ConfigB20(ConfigB16):
     def __init__(self):
         super().__init__()
-        self.data["batch_size"] = 128
-        self.trainer["max_epochs"] = 500
+        self.data.batch_size = 128
+        self.trainer.max_epochs = 500
 
 
 class ConfigB21(ConfigB16):
     def __init__(self):
         super().__init__()
-        self.data["batch_size"] = 32
-        self.trainer["max_epochs"] = 500
+        self.data.batch_size = 32
+        self.trainer.max_epochs = 500
 
 
 """
@@ -371,15 +371,15 @@ future experiments.
 class ConfigB22(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
-        self.model["freeze_embedding"] = True
-        self.model["freeze_transformer"] = 3
+        self.data.split_load_path = "data/waveform/split02.pt"
+        self.model.freeze_embedding = True
+        self.model.freeze_transformer = 3
         # [Contrastive, Reconstruction, RegressionDeep]
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB16/last.ckpt"
-        self.trainer["resume"] = True
+        self.trainer.resume = True
 
 
 """
@@ -393,21 +393,21 @@ pretrain.
 class ConfigB23(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
+        self.data.split_load_path = "data/waveform/split02.pt"
         # [Contrastive, Reconstruction, RegressionDeep]
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
-        self.trainer["max_epochs"] = 7580
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
+        self.trainer.max_epochs = 7580
 
 
 class ConfigB24(Config):
     def __init__(self):
         super().__init__()
-        self.data["split_load_path"] = "data/waveform/split02.pt"
+        self.data.split_load_path = "data/waveform/split02.pt"
         # [Contrastive, Reconstruction, RegressionDeep]
-        self.runner["enable"] = [False, False, True]
-        self.runner["weight"] = [  0.0,   0.0,  1.0]
-        self.trainer["ckpt_load_path"] = \
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
+        self.trainer.ckpt_load_path = \
             "ckpt/ConfigB23/last.ckpt"
 
 

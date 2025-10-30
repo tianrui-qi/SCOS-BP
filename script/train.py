@@ -6,6 +6,7 @@ import lightning.pytorch.callbacks
 import os
 import inspect
 import argparse
+import dataclasses
 
 import src
 
@@ -16,14 +17,15 @@ lightning.seed_everything(42, workers=True, verbose=False)
 
 def main() -> None:
     args = getArgs()
-    for name in args.config: train(getattr(src.config, name)())
+    for config_name in args.config_name: 
+        train(config_name)
 
 
-def getArgs():
+def getArgs() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--config", type=str, nargs="+", required=True, dest="config",
-        choices=[
+        "--config_name", "-C", type=str, nargs="+", required=True, 
+        dest="config_name", choices=[
             name for name, obj in inspect.getmembers(src.config) 
             if inspect.isclass(obj) 
             and issubclass(obj, src.config.Config) 
@@ -34,16 +36,17 @@ def getArgs():
     return args
 
 
-def train(config: src.config.Config) -> None:
-    name = config.__class__.__name__
+def train(config_name: str) -> None:
+    # config
+    config: src.config.Config = getattr(src.config, config_name)()
     # data
-    data = src.data.DataModule(**config.data)
+    data = src.data.DataModule(**dataclasses.asdict(config.data))
     # model
-    model = src.model.SCOST(**config.model)
-    if not config.trainer["resume"] and \
-    config.trainer["ckpt_load_path"] is not None:
+    model = src.model.SCOST(**dataclasses.asdict(config.model))
+    if not config.trainer.resume and \
+    config.trainer.ckpt_load_path is not None:
         ckpt = torch.load(
-            config.trainer["ckpt_load_path"], weights_only=True
+            config.trainer.ckpt_load_path, weights_only=True
         )
         state_dict = {
             k.replace("model.", ""): v for k, v in ckpt["state_dict"].items()
@@ -51,15 +54,17 @@ def train(config: src.config.Config) -> None:
         }
         model.load_state_dict(state_dict, strict=False)
     # runner
-    runner = src.runner.Runner(model=model, **config.runner)
+    runner = src.runner.Runner(
+        model=model, **dataclasses.asdict(config.runner)
+    )
     # trainer
     logger = lightning.pytorch.loggers.TensorBoardLogger(
-        save_dir=config.trainer["log_save_fold"], name=name, version="",
+        save_dir=config.trainer.log_save_fold, name=config_name, version="",
     )
     checkpoint = lightning.pytorch.callbacks.ModelCheckpoint(
-        dirpath=os.path.join(config.trainer["ckpt_save_fold"], name),
-        monitor=config.trainer["monitor"],
-        save_top_k=config.trainer["save_top_k"],
+        dirpath=os.path.join(config.trainer.ckpt_save_fold, config_name),
+        monitor=config.trainer.monitor,
+        save_top_k=config.trainer.save_top_k,
         save_last=True,
     )
     lrmonitor = lightning.pytorch.callbacks.LearningRateMonitor(
@@ -68,15 +73,15 @@ def train(config: src.config.Config) -> None:
     trainer = lightning.Trainer(
         logger=logger,
         callbacks=[checkpoint, lrmonitor],
-        max_epochs=config.trainer["max_epochs"],
+        max_epochs=config.trainer.max_epochs,
         log_every_n_steps=1,
         benchmark=True,
     )
     # fit
     trainer.fit(
         runner, datamodule=data,
-        ckpt_path=config.trainer["ckpt_load_path"] 
-        if config.trainer["resume"] else None
+        ckpt_path=config.trainer.ckpt_load_path
+        if config.trainer.resume else None
     )
 
 

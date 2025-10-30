@@ -105,8 +105,8 @@ class Masking:
         src_key_padding_mask: torch.Tensor,     # (B, C, L), bool
         mask: torch.Tensor,                     # (B, C, L), long
         p_point: float = 0.2, 
-        p_span_small: list[float] = [0.0, 0.5],
-        p_span_large: list[float] = [0.0, 1.0],
+        p_span_small: tuple[float, float] = (0.0, 0.5),
+        p_span_large: tuple[float, float] = (0.0, 1.0),
         p_hide: float = 0.9, p_keep: float = 0.1,
         **kwargs
     ) -> None:
