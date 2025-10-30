@@ -7,22 +7,33 @@ import argparse
 
 
 def main() -> None:
-    # get log_load_fold
+    args = getArgs()
+    for log_fold in args.log_fold: 
+        log(log_fold)
+
+
+def getArgs() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--log_load_fold", '-l', type=str, required=True)
+    parser.add_argument(
+        "--log_fold", '-L', type=str, nargs="+", required=True,
+        dest="log_fold",
+    )
     args = parser.parse_args()
-    log_load_fold = args.log_load_fold
+    return args
+
+
+def log(log_fold: str) -> None:
     # if train or valid subfolder exists, skip
-    if os.path.exists(os.path.join(log_load_fold, "train")) or \
-    os.path.exists(os.path.join(log_load_fold, "valid")):
+    if os.path.exists(os.path.join(log_fold, "train")) or \
+    os.path.exists(os.path.join(log_fold, "valid")):
         print(
-            f"Subfolder 'train' or 'valid' already exist in {log_load_fold}."
+            f"Subfolder 'train' or 'valid' already exist in {log_fold}."
             "Skipping tensorboard log rewriting."
         )
         return
     # write
     writeEvent(
-        log_load_fold, os.path.join(log_load_fold, "train"), 
+        log_fold, os.path.join(log_fold, "train"), 
         rename_rules = {
             "loss/reconstruction/train" : "loss/reconstruction",
             "loss/contrastive/train"    : "loss/contrastive",
@@ -31,7 +42,7 @@ def main() -> None:
         }
     )
     writeEvent(
-        log_load_fold, os.path.join(log_load_fold, "valid"), 
+        log_fold, os.path.join(log_fold, "valid"), 
         rename_rules = {
             "loss/reconstruction/valid" : "loss/reconstruction",
             "loss/contrastive/valid"    : "loss/contrastive",
@@ -40,16 +51,16 @@ def main() -> None:
         }
     )
     writeEvent(
-        log_load_fold, log_load_fold, 
+        log_fold, log_fold, 
         rename_rules = {
             "epoch"  : "lightning/epoch",
             "lr-Adam": "lightning/lr-Adam",
         }
     )
     # remove
-    os.remove(findEvent(log_load_fold))
-    if os.path.exists(os.path.join(log_load_fold, "hparams.yaml")):
-        os.remove(os.path.join(log_load_fold, "hparams.yaml"))
+    os.remove(findEvent(log_fold))
+    if os.path.exists(os.path.join(log_fold, "hparams.yaml")):
+        os.remove(os.path.join(log_fold, "hparams.yaml"))
 
 
 def writeEvent(

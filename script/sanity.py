@@ -2,6 +2,7 @@ import torch
 import lightning
 
 import argparse
+import dataclasses
 import matplotlib.pyplot as plt
 
 import src
@@ -18,22 +19,23 @@ def main():
 
     # config
     config = src.config.Config()
-    config.data["batch_size"] = 8           # small batch for debugging
-    config.data["channel_perm"] = False     # no channel perm for debugging
-    config.data["channel_drop"] = False     # no channel drop for debugging
+    config.data.split_load_path = "data/waveform/split02.pt"
+    config.data.channel_perm = False    # no channel perm for debugging
+    config.data.channel_drop = False    # no channel drop for debugging
+    config.data.batch_size = 8          # small batch for debugging
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # data, fixed at first batch
-    dm = src.data.DataModule(**config.data)
+    dm = src.data.DataModule(**dataclasses.asdict(config.data))
     dm.setup()
     x, ch, _ = next(iter(dm.train_dataloader()))
     x = x.to(device)
     ch = ch.to(device)
     # model
-    model = src.model.SCOST(**config.model).to(device)
+    model = src.model.SCOST(**dataclasses.asdict(config.model)).to(device)
 
     # train
     model.train()
-    opt = torch.optim.Adam(model.parameters(), lr=config.runner["lr"])
+    opt = torch.optim.Adam(model.parameters(), lr=config.runner.lr)
     for step in range(args.step):
         opt.zero_grad(set_to_none=True)
         pred, token = model(

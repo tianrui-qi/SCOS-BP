@@ -9,8 +9,9 @@ class Runner(lightning.LightningModule):
     weight: torch.Tensor
 
     def __init__(
-        self, model: torch.nn.Module, 
-        enable: list[bool], weight: list[float], T: float, 
+        self, 
+        model: torch.nn.Module, 
+        enable: tuple[bool, ...], weight: tuple[float, ...], T: float,
         lr: float, step_size: int, gamma: float, 
         **kwargs
     ) -> None:
