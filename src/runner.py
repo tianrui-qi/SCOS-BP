@@ -96,7 +96,8 @@ class Runner(lightning.LightningModule):
         x, channel_idx, y = batch   # (B, C, T), (B, C), (B, out_dim)
         x, _ = self.model(          # (B, out_dim), None
             x, channel_idx,
-            masking_type="contrastive", head_type="regression",
+            masking_type = "contrastive" if stage == "train" else None, 
+            head_type = "regression",
         )
         loss = torch.nn.functional.mse_loss(x, y)
         self.log(
