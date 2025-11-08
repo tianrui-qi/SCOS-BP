@@ -14,11 +14,13 @@ class Config():
 
 @dataclasses.dataclass(slots=True)
 class ConfigData():
-    x_load_path: str = "data/waveform/x.pt"
-    y_load_path: str = "data/waveform/y.pt"
-    split_load_path: str = "data/waveform/split.pt"
+    x_load_path: str = "data/wave2value/x.pt"
+    y_load_path: str = "data/wave2value/y.pt"
+    split_load_path: str = "data/wave2value/split.pt"
+    y_as_channel: bool = False
     channel_perm: bool = True
-    channel_drop: bool = True
+    channel_drop: float = 1     # probability of enable channel drop
+    channel_shift: float = 0
     batch_size: int = 256
     num_workers: int = 8
 
@@ -49,10 +51,10 @@ class ConfigModel():
 
 @dataclasses.dataclass(slots=True)
 class ConfigRunner():
-    # loss
+    # loss, [contrastive, reconstruction, regression]
     enable: tuple[bool, ...] = (True, True, False)
     weight: tuple[float, ...] = (0.2, 0.8, 0.0)
-    T: float = 0.2
+    T: float = 0.2  # temperature for contrastive loss
     # optimizer
     lr: float = 0.005
     step_size: int = 20

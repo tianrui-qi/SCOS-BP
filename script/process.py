@@ -3,13 +3,29 @@ import numpy as np
 import pandas as pd
 
 import os
+import argparse
 import scipy.io
 
 
-def main(data_fold: str ='data/waveform/') -> None:
+def main() -> None:
+    args = getArgs()
+    process(args.data_fold)
+
+
+def getArgs() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_fold", "-D", type=str, required=True)
+    args = parser.parse_args()
+    return args
+
+
+def process(data_fold: str) -> None:
     # load data
     data_load_path = os.path.join(data_fold, 'raw.mat')
     data = scipy.io.loadmat(data_load_path)["data_store"][0, 0]
+    # filer out sample that all nan in x and y
+    valid = ~(np.isnan(data[0]).all((1, 2)) & np.isnan(data[1]).all((1)))
+    data = [d[valid] for d in data]
     # create profile
     df_sample, df_subject = createProfile(data)
     # split, update profile in-place
@@ -26,11 +42,15 @@ def main(data_fold: str ='data/waveform/') -> None:
     # save data[0] waveform and data[1] bp as torch tensors
     x = torch.from_numpy(data[0]).to(torch.float).transpose(-1, -2)
     y = torch.from_numpy(data[1]).to(torch.float)
+    if x.shape[-1] == y.shape[-1]:
+        # if y is waveform, normalize to zero mean and unit std
+        valid = ~torch.isnan(y).any(dim=1)
+        y = (y - y[valid].mean()) / y[valid].std()
     torch.save(x, os.path.join(data_fold, 'x.pt'))
     torch.save(y, os.path.join(data_fold, 'y.pt'))
 
 
-def createProfile(data: np.ndarray) -> tuple[pd.DataFrame, pd.DataFrame]:
+def createProfile(data: list[np.ndarray]) -> tuple[pd.DataFrame, pd.DataFrame]:
     # create sample level profile
     def scalarize(arr, dtype=None):
         out = [
