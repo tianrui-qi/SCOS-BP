@@ -15,6 +15,8 @@ class Masking:
         x: torch.Tensor,            # (B, C, L, S), float
         channel_idx: torch.Tensor,  # (B, C), long
         masking_type: Literal["contrastive", "reconstruction"] | None = None,
+        user_mask: torch.Tensor | int | None = None,
+        user_src_key_padding_mask: torch.Tensor | int | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         B, C, L, _ = x.shape
         device = x.device
@@ -32,12 +34,44 @@ class Masking:
         # 0 = not mask, 1 = mask (hide), 2 = mask (keep)
         mask = torch.zeros_like(src_key_padding_mask, dtype=torch.long)
 
-        if masking_type == "contrastive": self.maskingContrastive_(
+        if user_mask is not None:
+            if isinstance(user_mask, int):
+                # if user give a int, then that int menas a channel_idx
+                # we mask all tokens of that channel for all samples
+                mask[
+                    (channel_idx == user_mask).unsqueeze(-1).expand(B, C, L)
+                ] = 1
+            if isinstance(user_mask, torch.Tensor):
+                # if user give a tensor, it can be (B, C) or (B, C, L)
+                # dtype can be long or bool
+                if user_mask.ndim == 2: 
+                    user_mask = user_mask.unsqueeze(-1).expand(B, C, L)
+                mask = user_mask.long().expand(B, C, L)
+        if user_src_key_padding_mask is not None:
+            if isinstance(user_src_key_padding_mask, int):
+                # if user give a int, then that int menas a channel_idx
+                # we drop all tokens of that channel for all samples
+                src_key_padding_mask |= (
+                    channel_idx == user_src_key_padding_mask
+                ).unsqueeze(-1).expand(B, C, L)
+            if isinstance(user_src_key_padding_mask, torch.Tensor):
+                if user_src_key_padding_mask.ndim == 2:
+                    user_src_key_padding_mask = \
+                        user_src_key_padding_mask.unsqueeze(-1).expand(B, C, L)
+                src_key_padding_mask |= \
+                    user_src_key_padding_mask.expand(B, C, L)
+
+        if user_mask is not None or user_src_key_padding_mask is not None:
+            # if user provide mask or src_key_padding_mask, we do not
+            # perform automatic masking
+            pass
+        elif masking_type == "contrastive": self.maskingContrastive_(
             channel_idx, src_key_padding_mask, mask, **self.kwargs
         )   # in-place change channel_idx, src_key_padding_mask
-        if masking_type == "reconstruction": self.maskingReconstruction_(
+        elif masking_type == "reconstruction": self.maskingReconstruction_(
             channel_idx, src_key_padding_mask, mask, **self.kwargs
         )   # in-place change src_key_padding_mask, mask
+
         return src_key_padding_mask, mask   # (B, C, L), (B, C, L)
 
     def maskingContrastive_(

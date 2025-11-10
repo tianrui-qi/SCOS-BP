@@ -53,6 +53,8 @@ class SCOST(torch.nn.Module):
         x: torch.Tensor,            # (B, C, T), float
         channel_idx: torch.Tensor,  # (B, C), long
         masking_type: Literal["contrastive", "reconstruction"] | None = None,
+        user_mask: torch.Tensor | int | None = None,
+        user_src_key_padding_mask: torch.Tensor | int | None = None,
         pool: bool = True,
         head_type: Literal[
             "contrastive", "reconstruction", "regression"
@@ -67,7 +69,9 @@ class SCOST(torch.nn.Module):
         y = x.detach()                  # (B, C, L, S)
         # masking
         src_key_padding_mask, mask = self.masking(  # (B, C, L), (B, C, L)
-            x, channel_idx, masking_type=masking_type
+            x, channel_idx, masking_type=masking_type,
+            user_mask=user_mask, 
+            user_src_key_padding_mask=user_src_key_padding_mask
         )
         # embedding
         x = self.embedding(     # (B, C, L, D)
