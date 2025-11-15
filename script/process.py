@@ -31,6 +31,7 @@ def process(data_fold: str) -> None:
     # split, update profile in-place
     split01(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split01')
     split02(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split02')
+    split03(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split03')
     # save profile
     df_sample.to_csv(os.path.join(data_fold, 'sample.csv'), index=False)
     df_subject.to_csv(os.path.join(data_fold, 'subject.csv'), index=False)
@@ -39,13 +40,11 @@ def process(data_fold: str) -> None:
     torch.save(s01, os.path.join(data_fold, 'split01.pt'))
     s02 = torch.as_tensor(df_sample['split02'].to_numpy(), dtype=torch.long)
     torch.save(s02, os.path.join(data_fold, 'split02.pt'))
+    s03 = torch.as_tensor(df_sample['split03'].to_numpy(), dtype=torch.long)
+    torch.save(s03, os.path.join(data_fold, 'split03.pt'))
     # save data[0] waveform and data[1] bp as torch tensors
     x = torch.from_numpy(data[0]).to(torch.float).transpose(-1, -2)
     y = torch.from_numpy(data[1]).to(torch.float)
-    if x.shape[-1] == y.shape[-1]:
-        # if y is waveform, normalize to zero mean and unit std
-        valid = ~torch.isnan(y).any(dim=1)
-        y = (y - y[valid].mean()) / y[valid].std()
     torch.save(x, os.path.join(data_fold, 'x.pt'))
     torch.save(y, os.path.join(data_fold, 'y.pt'))
 
@@ -315,6 +314,27 @@ def split02(
     #         f"Subject {subject}:\ttotal={total}\t"
     #         f"split0={counts[0]}\tsplit1={counts[1]}\tsplit2={counts[2]}"
     #     )
+
+
+def split03(
+    df_sample: pd.DataFrame, df_subject: pd.DataFrame,  # update in-place
+    ratio: tuple[float, float, float] = (0.5, 0.15, 0.35), 
+    name: str = 'split03', seed: int = 42, iters: int = 2000,
+) -> None:
+    # check if column split01 exists
+    if 'split01' not in df_sample.columns:
+        split01(df_sample, df_subject, ratio=ratio, name='split01')
+    # in addition to split01, put all samples that condition==1 into train set
+    df_sample[name] = df_sample['split01']
+    df_sample.loc[df_sample['condition'] == 1, name] = 0
+    df_subject[name] = -1
+    # print number of samples per split
+    print(name)
+    for s, n in enumerate(['train','valid','test']):
+        total_len = int(
+            (df_sample[name]==s).sum()
+        )
+        print(f"number of samples in {n}:\t{total_len}")
 
 
 if __name__ == "__main__": main()

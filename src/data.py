@@ -2,7 +2,7 @@ import torch
 import lightning
 
 
-__all__ = ["DataModule"]
+__all__ = ["DataModule", "Dataset"]
 
 
 class DataModule(lightning.LightningDataModule):
@@ -34,6 +34,10 @@ class DataModule(lightning.LightningDataModule):
         x = torch.load(self.x_load_path, weights_only=True)
         y = torch.load(self.y_load_path, weights_only=True)
         split = torch.load(self.split_load_path, weights_only=True)
+        # if y is waveform, normalize to zero mean and unit std
+        if x.shape[-1] == y.shape[-1]:
+            valid = ~torch.isnan(y).any(dim=1)
+            y = (y - y[valid].mean()) / y[valid].std()
         # if y_as_channel, append y as an additional channel to x
         if self.y_as_channel: x = torch.cat([x, y.unsqueeze(1)], dim=1)
         # split

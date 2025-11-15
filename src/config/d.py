@@ -1,7 +1,7 @@
 from .config import Config
 
 
-__all__ = ["ConfigD04"]
+__all__ = ["ConfigD04", "ConfigD05"]
 
 
 class ConfigD(Config):
@@ -65,3 +65,23 @@ class ConfigD04(ConfigD):
         self.model.p_span_large = (0.9, 1.0)
         self.runner.lr = 0.001
         self.trainer.ckpt_load_path = "ckpt/ConfigD03/last.ckpt"
+
+
+"""
+Try to solve calibration problem by put condition 1 data into training as well.
+"""
+
+
+class ConfigD05(ConfigD):
+    def __init__(self):
+        super().__init__()
+        self.data.split_load_path = "data/wave2wave/split03.pt"
+        self.data.channel_perm = False
+        self.data.channel_drop = 0.5
+        self.model.p_point = 0.05
+        self.model.p_span_small = (0.3, 0.5)
+        self.model.p_span_large = (0.9, 1.0)
+        self.runner.lr = 0.0008
+        self.trainer.max_epochs = 5340
+        self.trainer.ckpt_load_path = "ckpt/ConfigD04/last.ckpt"
+
