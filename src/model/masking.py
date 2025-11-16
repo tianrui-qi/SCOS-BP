@@ -1,27 +1,30 @@
 import torch
 
-from typing import Literal
-
 
 __all__ = ["Masking"]
 
 
 class Masking:
-    def __init__(self, **kwargs) -> None:
-        self.kwargs = kwargs
-
-    def __call__(
-        self, 
+    @staticmethod
+    def masking(
         x: torch.Tensor,            # (B, C, L, S), float
         channel_idx: torch.Tensor,  # (B, C), long
-        masking_type: Literal["contrastive", "reconstruction"] | None = None,
-        user_mask: torch.Tensor | int | None = None,
-        user_src_key_padding_mask: torch.Tensor | int | None = None,
+        user_mask: (
+            int | list[int] | tuple[int, ...] | torch.Tensor | None
+        ) = None,
+        user_src_key_padding_mask: (
+            int | list[int] | tuple[int, ...] | torch.Tensor | None
+        ) = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         B, C, L, _ = x.shape
         device = x.device
 
-        # init src_key_padding_mask as all False
+        """ 
+        src_key_padding_mask
+        (B, C, L), bool
+        True = drop, False = keep
+        """
+        # init src_key_padding_mask as all False, i.e., keep all tokens
         src_key_padding_mask = torch.zeros(
             B, C, L, dtype=torch.bool, device=device
         )
@@ -29,58 +32,85 @@ class Masking:
         src_key_padding_mask |= torch.isnan(x).any(dim=-1)
         # drop tokens from dropped channels
         src_key_padding_mask |= channel_idx.eq(-1).unsqueeze(-1).expand(B, C, L)
-
-        # init mask as all 0
-        # 0 = not mask, 1 = mask (hide), 2 = mask (keep)
-        mask = torch.zeros_like(src_key_padding_mask, dtype=torch.long)
-
-        if user_mask is not None:
-            if isinstance(user_mask, int):
-                # if user give a int, then that int menas a channel_idx
-                # we mask all tokens of that channel for all samples
-                mask[
-                    (channel_idx == user_mask).unsqueeze(-1).expand(B, C, L)
-                ] = 1
-            if isinstance(user_mask, torch.Tensor):
-                # if user give a tensor, it can be (B, C) or (B, C, L)
-                # dtype can be long or bool
-                if user_mask.ndim == 2: 
-                    user_mask = user_mask.unsqueeze(-1).expand(B, C, L)
-                mask = user_mask.long().expand(B, C, L)
-        if user_src_key_padding_mask is not None:
-            if isinstance(user_src_key_padding_mask, int):
-                # if user give a int, then that int menas a channel_idx
-                # we drop all tokens of that channel for all samples
-                src_key_padding_mask |= (
-                    channel_idx == user_src_key_padding_mask
-                ).unsqueeze(-1).expand(B, C, L)
-            if isinstance(user_src_key_padding_mask, torch.Tensor):
-                if user_src_key_padding_mask.ndim == 2:
-                    user_src_key_padding_mask = \
-                        user_src_key_padding_mask.unsqueeze(-1).expand(B, C, L)
-                src_key_padding_mask |= \
-                    user_src_key_padding_mask.expand(B, C, L)
-
-        if user_mask is not None or user_src_key_padding_mask is not None:
-            # if user provide mask or src_key_padding_mask, we do not
-            # perform automatic masking
+        # apply user_src_key_padding_mask
+        if user_src_key_padding_mask is None:
+            # no custom src_key_padding_mask
             pass
-        elif masking_type == "contrastive": self.maskingContrastive_(
-            channel_idx, src_key_padding_mask, mask, **self.kwargs
-        )   # in-place change channel_idx, src_key_padding_mask
-        elif masking_type == "reconstruction": self.maskingReconstruction_(
-            channel_idx, src_key_padding_mask, mask, **self.kwargs
-        )   # in-place change src_key_padding_mask, mask
+        elif isinstance(user_src_key_padding_mask, int):
+            # a single channel index
+            # drop all tokens of this channel for all samples
+            src_key_padding_mask |= (
+                channel_idx == user_src_key_padding_mask
+            ).unsqueeze(-1).expand(B, C, L)
+        elif (
+            isinstance(user_src_key_padding_mask, (list, tuple)) and 
+            all(isinstance(c, int) for c in user_src_key_padding_mask)
+        ):
+            # a list/tuple of channel indices
+            # drop all tokens of these channels for all samples
+            for c in user_src_key_padding_mask: src_key_padding_mask |= (
+                channel_idx == c
+            ).unsqueeze(-1).expand(B, C, L)
+        elif (
+            isinstance(user_src_key_padding_mask, torch.Tensor) and 
+            user_src_key_padding_mask.shape == (C, L)
+        ):
+            # a (C, L) tensor specifying per-channel & per-token dropping
+            # broadcast to (B, C, L) so every sample uses the same dropping
+            src_key_padding_mask |= (
+                user_src_key_padding_mask.bool().unsqueeze(0).expand(B, C, L)
+            )
+        else:
+            raise ValueError
+
+        """ 
+        mask
+        (B, C, L), long
+        0 = no mask, 1 = mask (hide), 2 = mask (keep)
+        """
+        # init mask as all 0, i.e., no mask
+        mask = torch.zeros(B, C, L, dtype=torch.long, device=device)
+        # apply user_mask
+        if user_mask is None:
+            # no custom mask
+            pass
+        elif isinstance(user_mask, int):
+            # a single channel index
+            # mask (hide) all tokens of this channel for all samples
+            mask[
+                (channel_idx == user_mask).unsqueeze(-1).expand(B, C, L)
+            ] = 1
+        elif (
+            isinstance(user_mask, (list, tuple)) and 
+            all(isinstance(c, int) for c in user_mask)
+        ):
+            # a list/tuple of channel indices
+            # mask (hide) all tokens of these channels for all samples
+            for c in user_mask: mask[
+                (channel_idx == c).unsqueeze(-1).expand(B, C, L)
+            ] = 1
+        elif (
+            isinstance(user_mask, torch.Tensor) and 
+            user_mask.shape == (C, L)
+        ):
+            # a (C, L) tensor specifying per-channel & per-token masking
+            # broadcast to (B, C, L) so every sample uses the same mask
+            # note that dtype can be long or bool
+            # if bool, True will be converted to 1, i.e., mask (hide)
+            # if long, directly use these values
+            mask = user_mask.long().unsqueeze(0).expand(B, C, L).to(device)
+        else:
+            raise ValueError
 
         return src_key_padding_mask, mask   # (B, C, L), (B, C, L)
 
+    @staticmethod
     def maskingContrastive_(
-        self,
-        channel_idx: torch.Tensor,              # (B, C), long
-        src_key_padding_mask: torch.Tensor,     # (B, C, L), bool
-        mask: torch.Tensor,                     # (B, C, L), long
-        **kwargs
-    ) -> None:
+        x: torch.Tensor,            # (B, C, L, S), float
+        channel_idx: torch.Tensor,  # (B, C), long
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        src_key_padding_mask, mask = Masking.masking(x, channel_idx)
+        
         B, C, L = src_key_padding_mask.shape
         device = src_key_padding_mask.device
 
@@ -133,17 +163,19 @@ class Masking:
 
         # TODO： random drop individual tokens for each channel
 
-    def maskingReconstruction_(
-        self, 
-        channel_idx: torch.Tensor,              # (B, C), long
-        src_key_padding_mask: torch.Tensor,     # (B, C, L), bool
-        mask: torch.Tensor,                     # (B, C, L), long
+        return src_key_padding_mask, mask   # (B, C, L), (B, C, L)
+
+    @staticmethod
+    def maskingReconstruction(
+        x: torch.Tensor,            # (B, C, L, S), float
+        channel_idx: torch.Tensor,  # (B, C), long
         p_point: float = 0.2, 
         p_span_small: tuple[float, float] = (0.0, 0.5),
         p_span_large: tuple[float, float] = (0.0, 1.0),
         p_hide: float = 0.9, p_keep: float = 0.1,
-        **kwargs
-    ) -> None:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        src_key_padding_mask, mask = Masking.masking(x, channel_idx)
+
         B, C, L = src_key_padding_mask.shape
         device = src_key_padding_mask.device
 
@@ -218,14 +250,13 @@ class Masking:
         mask[hide] = 1
         mask[keep] = 2
 
+        return src_key_padding_mask, mask   # (B, C, L), (B, C, L)
+
 
 if __name__ == "__main__":
     x = torch.randn(2, 4, 10, 10)
     channel_idx = torch.tensor([[0, 1, -1, 3], [-1, -1, 2, -1]])
-    masker = Masking()
-    src_key_padding_mask, mask = masker(
-        x, channel_idx, masking_type="reconstruction"
-    )
+    src_key_padding_mask, mask = Masking.maskingContrastive_(x, channel_idx)
     print(channel_idx)  # test if channel_idx is changed in-place
     print(src_key_padding_mask)
     print(mask)

@@ -18,6 +18,7 @@ lightning.seed_everything(42, workers=True, verbose=False)
 def main() -> None:
     args = getArgs()
     for config_name in args.config_name: 
+        print(f"=====[{config_name}]=====")
         train(config_name)
 
 

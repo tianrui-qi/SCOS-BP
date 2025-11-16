@@ -7,8 +7,11 @@ __all__ = []
 class ConfigCp(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
         self.data.num_workers = 0
+        # [Contrastive, ReconstructionRaw, Regression]
         self.runner.enable = (False, True, False)
         self.runner.weight = (  0.0,  1.0,   0.0)
         self.runner.step_size = 30
@@ -17,10 +20,13 @@ class ConfigCp(Config):
 class ConfigCf(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
         self.data.num_workers = 0
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 3
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 3
+        # [Contrastive, ReconstructionRaw, Regression]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.step_size = 30
@@ -61,7 +67,7 @@ class ConfigC03(ConfigCf):
         super().__init__()
         self.model.S = 100
         self.model.stride = 75
-        self.model.freeze_transformer = 4
+        self.runner.freeze_transformer = 4
         self.trainer.max_epochs = 7000
         self.trainer.ckpt_load_path = "ckpt/ConfigC02/last.ckpt"
 
@@ -90,7 +96,7 @@ class ConfigC06(ConfigCf):
         super().__init__()
         self.model.S = 100
         self.model.stride = 50
-        self.model.freeze_transformer = 4
+        self.runner.freeze_transformer = 4
         self.trainer.max_epochs = 7000
         self.trainer.ckpt_load_path = "ckpt/ConfigC05/last.ckpt"
 

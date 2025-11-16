@@ -14,9 +14,9 @@ class Config():
 
 @dataclasses.dataclass(slots=True)
 class ConfigData():
-    x_load_path: str = "data/wave2value/x.pt"
-    y_load_path: str = "data/wave2value/y.pt"
-    split_load_path: str = "data/wave2value/split.pt"
+    x_load_path: str = "data/wave2wave/x.pt"
+    y_load_path: str = "data/wave2wave/y.pt"
+    split_load_path: str = "data/wave2wave/split01.pt"
     y_as_channel: bool = False
     channel_perm: bool = True
     channel_drop: float = 1     # probability of enable channel drop
@@ -31,12 +31,6 @@ class ConfigModel():
     # tokenizer
     S: int = 40
     stride: int = 20
-    # masking
-    p_point: float = 0.2
-    p_span_small: tuple[float, float] = (0.0, 0.5)  # channel = 1
-    p_span_large: tuple[float, float] = (0.0, 1.0)  # channel > 1
-    p_hide: float = 0.9
-    p_keep: float = 0.1
     # embedding
     C_max: int = 8
     L_max: int = 1024
@@ -44,17 +38,24 @@ class ConfigModel():
     num_layers: int = 4
     nhead: int = 8
     dim_feedforward: int = 1024
-    # freeze
-    freeze_embedding: bool = False
-    freeze_transformer: int = 0
 
 
 @dataclasses.dataclass(slots=True)
 class ConfigRunner():
-    # loss, [contrastive, reconstruction, regression]
+    # model
+    freeze_embedding: bool = False
+    freeze_transformer: int = 0
+    # task, [Contrastive, ReconstructionRaw, Regression]
     enable: tuple[bool, ...] = (True, True, False)
     weight: tuple[float, ...] = (0.2, 0.8, 0.0)
-    T: float = 0.2  # temperature for contrastive loss
+    # contrastive
+    T: float = 0.2
+    # reconstruction
+    p_point: float = 0.2
+    p_span_small: tuple[float, float] = (0.0, 0.5)  # channel = 1
+    p_span_large: tuple[float, float] = (0.0, 1.0)  # channel > 1
+    p_hide: float = 0.9
+    p_keep: float = 0.1
     # optimizer
     lr: float = 0.005
     step_size: int = 20
