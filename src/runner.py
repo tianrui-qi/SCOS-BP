@@ -1,6 +1,8 @@
 import torch
 import lightning
 
+from .model import SCOST
+
 
 __all__ = ["Runner"]
 
@@ -10,24 +12,37 @@ class Runner(lightning.LightningModule):
 
     def __init__(
         self, 
-        model: torch.nn.Module, 
-        enable: tuple[bool, ...], weight: tuple[float, ...], T: float,
-        lr: float, step_size: int, gamma: float, 
-        **kwargs
+        model: SCOST, 
+        freeze_embedding: bool, freeze_transformer: int,
+        enable: tuple[bool, ...], weight: tuple[float, ...], 
+        T: float = 0.2,
+        p_point: float = 0.2, 
+        p_span_small: tuple[float, float] = (0.0, 0.5),
+        p_span_large: tuple[float, float] = (0.0, 1.0),
+        p_hide: float = 0.9, p_keep: float = 0.1,
+        lr: float = 0.005, step_size: int = 20, gamma: float = 0.98, 
     ) -> None:
         super().__init__()
         # model
         self.model = model
+        self.model.freeze(freeze_embedding, freeze_transformer)
         # loss
         self.register_buffer("weight", torch.tensor(
             [w for w, e in zip(weight, enable) if e], dtype=torch.float
         ))
         self.task = [f for f, e in zip([
             self._stepContrastive,
-            self._stepReconstruction,
+            self._stepReconstructionRaw,
             self._stepRegression,
         ], enable) if e]
+        # contrastive 
         self.T = T
+        # reconstruction
+        self.p_point = p_point
+        self.p_span_small = p_span_small
+        self.p_span_large = p_span_large
+        self.p_hide = p_hide
+        self.p_keep = p_keep
         # optimizer
         self.lr = lr
         self.step_size = step_size
@@ -54,16 +69,13 @@ class Runner(lightning.LightningModule):
         return loss
 
     def _stepContrastive(self, batch, stage):
-        x, channel_idx, y = batch   # (B, C, T), (B, C), (B, out_dim)
-        x_pred, _ = self.model(     # (B, D), None
-            x, channel_idx,
-            masking_type="contrastive", head_type="contrastive",
+        x, channel_idx, _ = batch   # (B, C, T), (B, C)
+        x_pred = (                  # (B, D)
+            self.model.forwardContrastive(x, channel_idx)
         )
-        x_orig, _ = self.model(     # (B, D), None
-            x, channel_idx,
-            masking_type=None, pool=True,
-        )
-        x_orig = x_orig.detach()
+        x_orig = (                  # (B, D)
+            self.model.forward(x, channel_idx)
+        ).detach()
         x_pred = torch.nn.functional.normalize(x_pred, dim=1, p=2)
         x_orig = torch.nn.functional.normalize(x_orig, dim=1, p=2)
         labels = torch.arange(x_orig.shape[0], device=x_orig.device)
@@ -79,13 +91,43 @@ class Runner(lightning.LightningModule):
         )
         return loss
 
-    def _stepReconstruction(self, batch, stage):
-        x, channel_idx, y = batch   # (B, C, T), (B, C), (B, out_dim)
-        x, y = self.model(          # (#mask, S), (#mask, S)
-            x, channel_idx,
-            masking_type="reconstruction", head_type="reconstruction",
-        )
-        loss = torch.nn.functional.mse_loss(x, y)
+    def _stepReconstructionRaw(self, batch, stage):
+        x, channel_idx, _ = batch   # (B, C, T), (B, C)
+        if stage == "train":
+            x, y = (                # (#mask, S), (#mask, S)
+                self.model.forwardReconstructionRaw(
+                    x, channel_idx,
+                    p_point=self.p_point,
+                    p_span_small=self.p_span_small,
+                    p_span_large=self.p_span_large,
+                    p_hide=self.p_hide,
+                    p_keep=self.p_keep,
+                )
+            )
+            loss = torch.nn.functional.smooth_l1_loss(x, y)
+        else:
+            x, y = (                # (B, C, T), (B, C, T)
+                self.model.forwardReconstructionRaw(
+                    x, channel_idx,
+                    user_mask=3,
+                )
+            )
+            true_min = y[:, 3, :].min(dim=-1).values
+            true_max = y[:, 3, :].max(dim=-1).values
+            pred_min = x[:, 3, :].min(dim=-1).values
+            pred_max = x[:, 3, :].max(dim=-1).values
+            mask = ~(
+                torch.isnan(true_min) | torch.isnan(true_max) | 
+                torch.isnan(pred_min) | torch.isnan(pred_max)
+            )
+            true_min = true_min[mask]
+            true_max = true_max[mask]
+            pred_min = pred_min[mask]
+            pred_max = pred_max[mask]
+            loss = (
+                torch.nn.functional.l1_loss(pred_min, true_min) +
+                torch.nn.functional.l1_loss(pred_max, true_max)
+            ) * 0.5 if mask.sum() > 0 else torch.tensor(0.0)
         self.log(
             f"loss/reconstruction/{stage}", loss, 
             on_step=False, on_epoch=True, logger=True
@@ -94,10 +136,8 @@ class Runner(lightning.LightningModule):
 
     def _stepRegression(self, batch, stage):
         x, channel_idx, y = batch   # (B, C, T), (B, C), (B, out_dim)
-        x, _ = self.model(          # (B, out_dim), None
-            x, channel_idx,
-            masking_type = "contrastive" if stage == "train" else None, 
-            head_type = "regression",
+        x = (                       # (B, out_dim)
+            self.model.forwardRegression(x, channel_idx)
         )
         loss = torch.nn.functional.mse_loss(x, y)
         self.log(

@@ -7,8 +7,10 @@ __all__ = []
 class ConfigB01(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split01.pt"
-        # [Contrastive, Reconstruction, RegressionSingle]
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.2,  0.8,  0.0)
         self.runner.lr = 0.001
@@ -25,8 +27,10 @@ much on reconstruction.
 class ConfigB02(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split01.pt"
-        # [Contrastive, Reconstruction, RegressionSingle]
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.5,  0.5,  0.0)
         self.runner.lr = 0.0005
@@ -51,10 +55,12 @@ Now, we finetune with regression task.
 class ConfigB03(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split01.pt"
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 4
-        # [Contrastive, Reconstruction, RegressionSingle]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 4
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.0,  0.0,  1.0)
         self.runner.lr = 0.0001
@@ -66,10 +72,12 @@ class ConfigB03(Config):
 class ConfigB04(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split01.pt"
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 3
-        # [Contrastive, Reconstruction, RegressionSingle]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 3
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.0,  0.0,  1.0)
         self.runner.lr = 0.0001
@@ -92,8 +100,10 @@ and control variables.
 class ConfigB05(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
-        # [Contrastive, Reconstruction, RegressionSingle]
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.0,  1.0,  0.0)
         self.trainer.max_epochs = 3620
@@ -102,10 +112,12 @@ class ConfigB05(Config):
 class ConfigB06(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
         self.data.batch_size = 1024
         self.data.num_workers = 16
-        # [Contrastive, Reconstruction, RegressionSingle]
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (False, True, False)
         self.runner.weight = (  0.0,  1.0,   0.0)
         self.runner.lr = 0.0005
@@ -122,12 +134,14 @@ After pretrain only with reconstruction, we finetune by regression task.
 class ConfigB07(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
         self.data.batch_size = 1024
         self.data.num_workers = 16
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 4
-        # [Contrastive, Reconstruction, RegressionSingle]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 4
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.trainer.ckpt_load_path = \
@@ -137,12 +151,14 @@ class ConfigB07(Config):
 class ConfigB08(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
         self.data.batch_size = 1024
         self.data.num_workers = 16
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 3
-        # [Contrastive, Reconstruction, RegressionSingle]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 3
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.lr = 0.001
@@ -154,12 +170,14 @@ class ConfigB08(Config):
 class ConfigB09(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
         self.data.batch_size = 1024
         self.data.num_workers = 16
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 2
-        # [Contrastive, Reconstruction, RegressionSingle]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 2
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.lr = 0.001
@@ -178,7 +196,7 @@ regession head with 2 hidden linear layers and 1 output linear layer. We
 want to see how it perform.
 for enable and weight, now we have four tasks and the order is:
 -   Contrastive
--   Reconstruction
+-   ReconstructionRaw
 -   RegressionSingle
 -   RegressionDeep
 """
@@ -187,12 +205,14 @@ for enable and weight, now we have four tasks and the order is:
 class ConfigB10(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
         self.data.batch_size = 1024
         self.data.num_workers = 16
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 4
-        # [Contrastive, Reconstruction, RegressionDeep]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 4
+        # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.lr = 0.01
@@ -213,10 +233,12 @@ to ConfigB09, we open more layers to train.
 class ConfigB11(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 1
-        # [Contrastive, Reconstruction, RegressionDeep]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 1
+        # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, True, True)
         self.runner.weight = (  0.0,  1.0,  1.0)
         self.trainer.max_epochs = 425
@@ -238,10 +260,12 @@ To check which factor cause the improvement, we perform a ablation study.
 class ConfigB12(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 1
-        # [Contrastive, Reconstruction, RegressionSingle]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 1
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (False, True, True)
         self.runner.weight = (  0.0,  1.0,  1.0)
         self.trainer.max_epochs = 434
@@ -252,7 +276,7 @@ class ConfigB12(Config):
 class ConfigB13(ConfigB11):
     def __init__(self):
         super().__init__()
-        self.model.freeze_transformer = 1
+        self.runner.freeze_transformer = 1
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
 
@@ -260,7 +284,7 @@ class ConfigB13(ConfigB11):
 class ConfigB14(ConfigB11):
     def __init__(self):
         super().__init__()
-        self.model.freeze_transformer = 0
+        self.runner.freeze_transformer = 0
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
 
@@ -268,7 +292,7 @@ class ConfigB14(ConfigB11):
 class ConfigB15(ConfigB11):
     def __init__(self):
         super().__init__()
-        self.model.freeze_transformer = 2
+        self.runner.freeze_transformer = 2
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
 
@@ -276,7 +300,7 @@ class ConfigB15(ConfigB11):
 class ConfigB16(ConfigB11):
     def __init__(self):
         super().__init__()
-        self.model.freeze_transformer = 3
+        self.runner.freeze_transformer = 3
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
 
@@ -284,7 +308,7 @@ class ConfigB16(ConfigB11):
 class ConfigB17(ConfigB11):
     def __init__(self):
         super().__init__()
-        self.model.freeze_transformer = 4
+        self.runner.freeze_transformer = 4
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
 
@@ -371,10 +395,12 @@ future experiments.
 class ConfigB22(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 3
-        # [Contrastive, Reconstruction, RegressionDeep]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 3
+        # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.trainer.ckpt_load_path = \
@@ -393,8 +419,10 @@ pretrain.
 class ConfigB23(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
-        # [Contrastive, Reconstruction, RegressionDeep]
+        # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.trainer.max_epochs = 7580
@@ -403,8 +431,10 @@ class ConfigB23(Config):
 class ConfigB24(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.split_load_path = "data/wave2value/split02.pt"
-        # [Contrastive, Reconstruction, RegressionDeep]
+        # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.trainer.ckpt_load_path = \

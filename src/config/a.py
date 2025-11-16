@@ -7,8 +7,10 @@ __all__ = []
 class ConfigA01(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.profile_load_path = "data/wave2value/profile.csv"
-        # [Contrastive, Reconstruction, RegressionSingle]
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = (0.2,  0.8,  0.0)
         self.trainer.max_epochs = 2350
@@ -17,10 +19,12 @@ class ConfigA01(Config):
 class ConfigA02(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.profile_load_path = "data/wave2value/profile.csv"
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 3
-        # [Contrastive, Reconstruction, RegressionSingle]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 3
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True,    True)
         self.runner.weight = ( 0.2,  0.8, 0.00001)
         self.trainer.max_epochs = 2860
@@ -31,10 +35,12 @@ class ConfigA02(Config):
 class ConfigA03(Config):
     def __init__(self):
         super().__init__()
+        self.data.x_load_path = "data/wave2value/x.pt"
+        self.data.y_load_path = "data/wave2value/y.pt"
         self.data.profile_load_path = "data/wave2value/profile.csv"
-        self.model.freeze_embedding = True
-        self.model.freeze_transformer = 2
-        # [Contrastive, Reconstruction, RegressionSingle]
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 2
+        # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True,   True)
         self.runner.weight = ( 0.4,  0.6, 0.0001)
         self.trainer.max_epochs = 5000

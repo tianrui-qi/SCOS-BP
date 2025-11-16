@@ -3,7 +3,7 @@ import torch
 
 __all__ = [
     "HeadContrastive",
-    "HeadReconstruction",
+    "HeadReconstructionRaw",
     "HeadRegression",
 ]
 
@@ -20,7 +20,7 @@ class HeadContrastive(torch.nn.Module):
         return self.mlp(x)  # (B, D) -> (B, D)
 
 
-class HeadReconstruction(torch.nn.Module):
+class HeadReconstructionRaw(torch.nn.Module):
     def __init__(self, D: int, S: int) -> None:
         super().__init__()
         self.mlp = torch.nn.Sequential(
