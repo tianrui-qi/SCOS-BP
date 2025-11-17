@@ -25,9 +25,9 @@ def main():
     elif torch.backends.mps.is_available(): device = "mps"
     else: device = "cpu"
     # data, fixed at first batch
-    dm = src.data.DataModule(**dataclasses.asdict(config.data))
+    dm = src.data.RawDataModule(**dataclasses.asdict(config.data))
     dm.setup()
-    x, channel_idx, _ = next(iter(dm.train_dataloader()))
+    x, channel_idx = next(iter(dm.train_dataloader()))
     x, channel_idx = x.to(device), channel_idx.to(device)
     # model
     model = src.model.SCOST(**dataclasses.asdict(config.model)).to(device)

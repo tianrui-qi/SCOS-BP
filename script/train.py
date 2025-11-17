@@ -47,7 +47,8 @@ def train(config_name: str) -> None:
     if not config.trainer.resume and \
     config.trainer.ckpt_load_path is not None:
         ckpt = torch.load(
-            config.trainer.ckpt_load_path, weights_only=True
+            config.trainer.ckpt_load_path, weights_only=True,
+            map_location=("cuda" if torch.cuda.is_available() else "cpu")
         )
         state_dict = {
             k.replace("model.", ""): v for k, v in ckpt["state_dict"].items()

@@ -7,9 +7,8 @@ __all__ = []
 class ConfigB01(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split01.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split01"
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.2,  0.8,  0.0)
@@ -27,9 +26,8 @@ much on reconstruction.
 class ConfigB02(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split01.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split01"
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.5,  0.5,  0.0)
@@ -55,9 +53,8 @@ Now, we finetune with regression task.
 class ConfigB03(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split01.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split01"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 4
         # [Contrastive, ReconstructionRaw, RegressionSingle]
@@ -72,9 +69,8 @@ class ConfigB03(Config):
 class ConfigB04(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split01.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split01"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
         # [Contrastive, ReconstructionRaw, RegressionSingle]
@@ -100,9 +96,8 @@ and control variables.
 class ConfigB05(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.0,  1.0,  0.0)
@@ -112,9 +107,8 @@ class ConfigB05(Config):
 class ConfigB06(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         self.data.batch_size = 1024
         self.data.num_workers = 16
         # [Contrastive, ReconstructionRaw, RegressionSingle]
@@ -134,9 +128,8 @@ After pretrain only with reconstruction, we finetune by regression task.
 class ConfigB07(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         self.data.batch_size = 1024
         self.data.num_workers = 16
         self.runner.freeze_embedding = True
@@ -151,9 +144,8 @@ class ConfigB07(Config):
 class ConfigB08(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         self.data.batch_size = 1024
         self.data.num_workers = 16
         self.runner.freeze_embedding = True
@@ -170,9 +162,8 @@ class ConfigB08(Config):
 class ConfigB09(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         self.data.batch_size = 1024
         self.data.num_workers = 16
         self.runner.freeze_embedding = True
@@ -205,9 +196,8 @@ for enable and weight, now we have four tasks and the order is:
 class ConfigB10(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         self.data.batch_size = 1024
         self.data.num_workers = 16
         self.runner.freeze_embedding = True
@@ -233,9 +223,8 @@ to ConfigB09, we open more layers to train.
 class ConfigB11(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 1
         # [Contrastive, ReconstructionRaw, RegressionDeep]
@@ -260,9 +249,8 @@ To check which factor cause the improvement, we perform a ablation study.
 class ConfigB12(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 1
         # [Contrastive, ReconstructionRaw, RegressionSingle]
@@ -395,9 +383,8 @@ future experiments.
 class ConfigB22(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
         # [Contrastive, ReconstructionRaw, RegressionDeep]
@@ -419,9 +406,8 @@ pretrain.
 class ConfigB23(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
@@ -431,9 +417,8 @@ class ConfigB23(Config):
 class ConfigB24(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)

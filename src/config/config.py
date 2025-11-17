@@ -14,13 +14,20 @@ class Config():
 
 @dataclasses.dataclass(slots=True)
 class ConfigData():
-    x_load_path: str = "data/wave2wave/x.pt"
-    y_load_path: str = "data/wave2wave/y.pt"
-    split_load_path: str = "data/wave2wave/split01.pt"
-    y_as_channel: bool = False
+    enable: tuple[bool, ...] = (True, False, True, False)
+    # datamodule
+    data_load_fold: str = "data/wave2wave/"
+    split: str = "split01"
+    # perturb
+    P: int = 64
+    channel_idx_bp: int = 3
+    a_range: tuple[float, float] | float = (0.5, 1.5)
+    b_range: tuple[float, float] | float = (-2.0, 2.0)
+    # augment
     channel_perm: bool = True
     channel_drop: float = 1     # probability of enable channel drop
     channel_shift: float = 0
+    # dataloader
     batch_size: int = 256
     num_workers: int = 8
 
@@ -45,9 +52,9 @@ class ConfigRunner():
     # model
     freeze_embedding: bool = False
     freeze_transformer: int = 0
-    # task, [Contrastive, ReconstructionRaw, Regression]
-    enable: tuple[bool, ...] = (True, True, False)
-    weight: tuple[float, ...] = (0.2, 0.8, 0.0)
+    # loss
+    enable: tuple[bool, ...] = (True, False, True, False)
+    weight: tuple[float, ...] = (0.2, 0.0, 0.8, 0.0)
     # contrastive
     T: float = 0.2
     # reconstruction

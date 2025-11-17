@@ -7,28 +7,22 @@ __all__ = []
 class ConfigCp(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.enable = (False, False, True, False)
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         self.data.num_workers = 0
-        # [Contrastive, ReconstructionRaw, Regression]
-        self.runner.enable = (False, True, False)
-        self.runner.weight = (  0.0,  1.0,   0.0)
         self.runner.step_size = 30
 
 
 class ConfigCf(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.split_load_path = "data/wave2value/split02.pt"
+        self.data.enable = (False, False, False, True)
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split02"
         self.data.num_workers = 0
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
-        # [Contrastive, ReconstructionRaw, Regression]
-        self.runner.enable = (False, False, True)
-        self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.step_size = 30
 
 
@@ -240,7 +234,7 @@ where train and valid's subject are joint.
 class ConfigC20(ConfigCp):
     def __init__(self):
         super().__init__()
-        self.data.split_load_path = "data/wave2value/split01.pt"
+        self.data.split = "split01"
         self.model.S = 100
         self.model.stride = 25
 
@@ -248,7 +242,7 @@ class ConfigC20(ConfigCp):
 class ConfigC21(ConfigCf):
     def __init__(self):
         super().__init__()
-        self.data.split_load_path = "data/wave2value/split01.pt"
+        self.data.split = "split01"
         self.model.S = 100
         self.model.stride = 25
         self.trainer.ckpt_load_path = "ckpt/ConfigC20/last.ckpt"
@@ -263,7 +257,7 @@ subjects?
 class ConfigC22(ConfigCf):
     def __init__(self):
         super().__init__()
-        self.data.split_load_path = "data/wave2value/split01.pt"
+        self.data.split = "split01"
         self.model.S = 100
         self.model.stride = 25
         self.trainer.ckpt_load_path = "ckpt/ConfigC08/last.ckpt"
