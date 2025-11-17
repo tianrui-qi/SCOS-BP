@@ -7,9 +7,8 @@ __all__ = []
 class ConfigA01(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.profile_load_path = "data/wave2value/profile.csv"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split"
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = (0.2,  0.8,  0.0)
@@ -19,9 +18,8 @@ class ConfigA01(Config):
 class ConfigA02(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.profile_load_path = "data/wave2value/profile.csv"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
         # [Contrastive, ReconstructionRaw, RegressionSingle]
@@ -35,9 +33,8 @@ class ConfigA02(Config):
 class ConfigA03(Config):
     def __init__(self):
         super().__init__()
-        self.data.x_load_path = "data/wave2value/x.pt"
-        self.data.y_load_path = "data/wave2value/y.pt"
-        self.data.profile_load_path = "data/wave2value/profile.csv"
+        self.data.data_load_fold = "data/wave2value/"
+        self.data.split = "split"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 2
         # [Contrastive, ReconstructionRaw, RegressionSingle]

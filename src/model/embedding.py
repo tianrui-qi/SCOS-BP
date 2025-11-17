@@ -17,13 +17,13 @@ class Embedding(torch.nn.Module):
     def forward(
         self, 
         x: torch.Tensor,                        # (B, C, L, S)
-        channel_idx: torch.Tensor,              # (B, C), long
+        x_channel_idx: torch.Tensor,            # (B, C), long
         src_key_padding_mask: torch.Tensor,     # (B, C, L), bool
         mask: torch.Tensor,                     # (B, C, L), long
     ) -> torch.Tensor:
         x = self.dropout(
             self.embd_token(x, src_key_padding_mask, mask) +
-            self.embd_channel(channel_idx) + 
+            self.embd_channel(x_channel_idx) + 
             self.embd_position(x.shape[2])
         )
         return x    # (B, C, L, D)
@@ -70,8 +70,8 @@ class EmbeddingChannel(torch.nn.Module):
             num_embeddings=C_max+1, embedding_dim=D, padding_idx=0
         )
 
-    def forward(self, channel_idx: torch.Tensor) -> torch.Tensor:
-        x = self.ce(channel_idx + 1)    # (B, C) -> (B, C, D)
+    def forward(self, x_channel_idx: torch.Tensor) -> torch.Tensor:
+        x = self.ce(x_channel_idx + 1)  # (B, C) -> (B, C, D)
         x = x.unsqueeze(2)              # (B, C, D) -> (B, C, 1, D)
         return x                        # (B, C, 1, D)
 

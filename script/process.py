@@ -6,42 +6,35 @@ import os
 import argparse
 import scipy.io
 
-
+ 
 def main() -> None:
     args = getArgs()
-    process(args.data_fold)
+    process01(os.path.join(args.data_dict, "wave2value/"))
+    process02(os.path.join(args.data_dict, "wave2wave/"))
 
 
 def getArgs() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_fold", "-D", type=str, required=True)
+    parser.add_argument(
+        "--data_dict", "-D", type=str, required=False, default="data/"
+    )
     args = parser.parse_args()
     return args
 
 
-def process(data_fold: str) -> None:
+def process01(data_fold: str) -> None:
+    print(f"=====[{data_fold}]=====")
     # load data
     data_load_path = os.path.join(data_fold, 'raw.mat')
     data = scipy.io.loadmat(data_load_path)["data_store"][0, 0]
-    # filer out sample that all nan in x and y
-    valid = ~(np.isnan(data[0]).all((1, 2)) & np.isnan(data[1]).all((1)))
-    data = [d[valid] for d in data]
     # create profile
-    df_sample, df_subject = createProfile(data)
+    df_sample, df_subject = _createProfile(data)
     # split, update profile in-place
-    split01(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split01')
-    split02(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split02')
-    split03(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split03')
+    _split01(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split01')
+    _split02(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split02')
     # save profile
     df_sample.to_csv(os.path.join(data_fold, 'sample.csv'), index=False)
     df_subject.to_csv(os.path.join(data_fold, 'subject.csv'), index=False)
-    # save split as torch tensor
-    s01 = torch.as_tensor(df_sample['split01'].to_numpy(), dtype=torch.long)
-    torch.save(s01, os.path.join(data_fold, 'split01.pt'))
-    s02 = torch.as_tensor(df_sample['split02'].to_numpy(), dtype=torch.long)
-    torch.save(s02, os.path.join(data_fold, 'split02.pt'))
-    s03 = torch.as_tensor(df_sample['split03'].to_numpy(), dtype=torch.long)
-    torch.save(s03, os.path.join(data_fold, 'split03.pt'))
     # save data[0] waveform and data[1] bp as torch tensors
     x = torch.from_numpy(data[0]).to(torch.float).transpose(-1, -2)
     y = torch.from_numpy(data[1]).to(torch.float)
@@ -49,7 +42,31 @@ def process(data_fold: str) -> None:
     torch.save(y, os.path.join(data_fold, 'y.pt'))
 
 
-def createProfile(data: list[np.ndarray]) -> tuple[pd.DataFrame, pd.DataFrame]:
+def process02(data_fold: str) -> None:
+    print(f"=====[{data_fold}]=====")
+    # load data
+    data_load_path = os.path.join(data_fold, 'raw.mat')
+    data = scipy.io.loadmat(data_load_path)["data_store"][0, 0]
+    # filer out sample that all nan in x and y
+    valid = ~(np.isnan(data[0]).all((1, 2)) & np.isnan(data[1]).all((1)))
+    data = [d[valid] for d in data]
+    # create profile
+    df_sample, df_subject = _createProfile(data)
+    # split, update profile in-place
+    _split01(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split01')
+    _split02(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split02')
+    _split03(df_sample, df_subject, ratio=(0.5, 0.2, 0.3), name='split03')
+    # save profile
+    df_sample.to_csv(os.path.join(data_fold, 'sample.csv'), index=False)
+    df_subject.to_csv(os.path.join(data_fold, 'subject.csv'), index=False)
+    # combine data[0] and data[1] and save as torch tensor
+    x = torch.from_numpy(data[0]).to(torch.float).transpose(-1, -2)
+    y = torch.from_numpy(data[1]).to(torch.float)
+    x = torch.cat([x, y.unsqueeze(1)], dim=1)   # y as channel
+    torch.save(x, os.path.join(data_fold, 'x.pt'))
+
+
+def _createProfile(data: list[np.ndarray]) -> tuple[pd.DataFrame, pd.DataFrame]:
     # create sample level profile
     def scalarize(arr, dtype=None):
         out = [
@@ -94,7 +111,7 @@ def createProfile(data: list[np.ndarray]) -> tuple[pd.DataFrame, pd.DataFrame]:
     return df_sample, df_subject
 
 
-def split01(
+def _split01(
     df_sample: pd.DataFrame, df_subject: pd.DataFrame,  # update in-place
     ratio: tuple[float, float, float] = (0.5, 0.15, 0.35), 
     name: str = 'split01', seed: int = 42, iters: int = 2000,
@@ -204,7 +221,7 @@ def split01(
         print(f"number of samples in {n}:\t{total_len}")
 
 
-def split02(
+def _split02(
     df_sample: pd.DataFrame, df_subject: pd.DataFrame,  # updated in place
     ratio: tuple[float, float, float] = (0.5, 0.15, 0.35), 
     name: str = "split02", seed: int = 42,
@@ -316,14 +333,14 @@ def split02(
     #     )
 
 
-def split03(
+def _split03(
     df_sample: pd.DataFrame, df_subject: pd.DataFrame,  # update in-place
     ratio: tuple[float, float, float] = (0.5, 0.15, 0.35), 
     name: str = 'split03', seed: int = 42, iters: int = 2000,
 ) -> None:
     # check if column split01 exists
     if 'split01' not in df_sample.columns:
-        split01(df_sample, df_subject, ratio=ratio, name='split01')
+        _split01(df_sample, df_subject, ratio=ratio, name='split01')
     # in addition to split01, put all samples that condition==1 into train set
     df_sample[name] = df_sample['split01']
     df_sample.loc[df_sample['condition'] == 1, name] = 0

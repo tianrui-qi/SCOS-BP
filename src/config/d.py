@@ -1,20 +1,17 @@
 from .config import Config
 
 
-__all__ = ["ConfigD04", "ConfigD05", "ConfigD06"]
+__all__ = ["ConfigD03"]
 
 
 class ConfigD(Config):
     def __init__(self):
         super().__init__()
-        self.data.y_as_channel = True
+        self.data.enable = (False, False, True, False)
         self.data.channel_shift = 25
         self.data.num_workers = 0
         self.model.S = 100
         self.model.stride = 25
-        # [Contrastive, ReconstructionRaw, Regression]
-        self.runner.enable = (False, True, False)
-        self.runner.weight = (  0.0,  1.0,   0.0)
         self.runner.step_size = 30
 
 
@@ -27,7 +24,7 @@ First, we validate on split02 (joint) to make sure everything works well.
 class ConfigD01(ConfigD):
     def __init__(self):
         super().__init__()
-        self.data.split_load_path = "data/wave2wave/split02.pt"
+        self.data.split = "split02"
         self.data.channel_drop = 0.5
         self.trainer.max_epochs = 2640
 
@@ -35,7 +32,7 @@ class ConfigD01(ConfigD):
 class ConfigD02(ConfigD):
     def __init__(self):
         super().__init__()
-        self.data.split_load_path = "data/wave2wave/split02.pt"
+        self.data.split = "split02"
         self.runner.p_span_large = (0.5, 1.0)
         self.trainer.ckpt_load_path = "ckpt/ConfigD01/last.ckpt"
         self.trainer.resume = True
@@ -72,7 +69,7 @@ Try to solve calibration problem by put condition 1 data into training as well.
 class ConfigD05(ConfigD):
     def __init__(self):
         super().__init__()
-        self.data.split_load_path = "data/wave2wave/split03.pt"
+        self.data.split = "split03"
         self.data.channel_perm = False
         self.data.channel_drop = 0.5
         self.runner.p_point = 0.05

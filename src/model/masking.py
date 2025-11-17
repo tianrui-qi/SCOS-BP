@@ -7,8 +7,8 @@ __all__ = ["Masking"]
 class Masking:
     @staticmethod
     def masking(
-        x: torch.Tensor,            # (B, C, L, S), float
-        channel_idx: torch.Tensor,  # (B, C), long
+        x: torch.Tensor,                # (B, C, L, S), float
+        x_channel_idx: torch.Tensor,    # (B, C), long
         user_mask: (
             int | list[int] | tuple[int, ...] | torch.Tensor | None
         ) = None,
@@ -31,7 +31,9 @@ class Masking:
         # drop tokens that has nan values
         src_key_padding_mask |= torch.isnan(x).any(dim=-1)
         # drop tokens from dropped channels
-        src_key_padding_mask |= channel_idx.eq(-1).unsqueeze(-1).expand(B, C, L)
+        src_key_padding_mask |= (
+            x_channel_idx.eq(-1).unsqueeze(-1).expand(B, C, L)
+        )
         # apply user_src_key_padding_mask
         if user_src_key_padding_mask is None:
             # no custom src_key_padding_mask
@@ -40,7 +42,7 @@ class Masking:
             # a single channel index
             # drop all tokens of this channel for all samples
             src_key_padding_mask |= (
-                channel_idx == user_src_key_padding_mask
+                x_channel_idx == user_src_key_padding_mask
             ).unsqueeze(-1).expand(B, C, L)
         elif (
             isinstance(user_src_key_padding_mask, (list, tuple)) and 
@@ -49,7 +51,7 @@ class Masking:
             # a list/tuple of channel indices
             # drop all tokens of these channels for all samples
             for c in user_src_key_padding_mask: src_key_padding_mask |= (
-                channel_idx == c
+                x_channel_idx == c
             ).unsqueeze(-1).expand(B, C, L)
         elif (
             isinstance(user_src_key_padding_mask, torch.Tensor) and 
@@ -78,7 +80,7 @@ class Masking:
             # a single channel index
             # mask (hide) all tokens of this channel for all samples
             mask[
-                (channel_idx == user_mask).unsqueeze(-1).expand(B, C, L)
+                (x_channel_idx == user_mask).unsqueeze(-1).expand(B, C, L)
             ] = 1
         elif (
             isinstance(user_mask, (list, tuple)) and 
@@ -87,7 +89,7 @@ class Masking:
             # a list/tuple of channel indices
             # mask (hide) all tokens of these channels for all samples
             for c in user_mask: mask[
-                (channel_idx == c).unsqueeze(-1).expand(B, C, L)
+                (x_channel_idx == c).unsqueeze(-1).expand(B, C, L)
             ] = 1
         elif (
             isinstance(user_mask, torch.Tensor) and 
@@ -106,19 +108,19 @@ class Masking:
 
     @staticmethod
     def maskingContrastive_(
-        x: torch.Tensor,            # (B, C, L, S), float
-        channel_idx: torch.Tensor,  # (B, C), long
+        x: torch.Tensor,                # (B, C, L, S), float
+        x_channel_idx: torch.Tensor,    # (B, C), long
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        src_key_padding_mask, mask = Masking.masking(x, channel_idx)
+        src_key_padding_mask, mask = Masking.masking(x, x_channel_idx)
         
         B, C, L = src_key_padding_mask.shape
         device = src_key_padding_mask.device
 
-        # random drop channel for each sample, i.e., set channel_idx to -1
+        # random drop channel for each sample, i.e., set x_channel_idx to -1
         # keep at least one valid channel for each sample
         # note that drop channel here is different from drop channel in 
         # dataset since contrastive learning needs diverse views
-        valid = channel_idx.ne(-1)
+        valid = x_channel_idx.ne(-1)
         keep_num = (
             torch.rand(B, device=device) * valid.sum(dim=1).float()
         ).floor().long() + 1
@@ -128,11 +130,13 @@ class Masking:
         thresh = sort_score.gather(
             1, (keep_num - 1).clamp(max=C-1).unsqueeze(1)
         )
-        # in-place update channel_idx 
+        # in-place update x_channel_idx 
         keep = score >= thresh
-        channel_idx[~keep] = -1
+        x_channel_idx[~keep] = -1
         # in-place drop tokens from dropped channels
-        src_key_padding_mask |= channel_idx.eq(-1).unsqueeze(-1).expand(B, C, L)
+        src_key_padding_mask |= (
+            x_channel_idx.eq(-1).unsqueeze(-1).expand(B, C, L)
+        )
 
         # keep 80%~100% of contiguous valid tokens for each channel
         valid = ~src_key_padding_mask
@@ -167,14 +171,14 @@ class Masking:
 
     @staticmethod
     def maskingReconstruction(
-        x: torch.Tensor,            # (B, C, L, S), float
-        channel_idx: torch.Tensor,  # (B, C), long
+        x: torch.Tensor,                # (B, C, L, S), float
+        x_channel_idx: torch.Tensor,    # (B, C), long
         p_point: float = 0.2, 
         p_span_small: tuple[float, float] = (0.0, 0.5),
         p_span_large: tuple[float, float] = (0.0, 1.0),
         p_hide: float = 0.9, p_keep: float = 0.1,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        src_key_padding_mask, mask = Masking.masking(x, channel_idx)
+        src_key_padding_mask, mask = Masking.masking(x, x_channel_idx)
 
         B, C, L = src_key_padding_mask.shape
         device = src_key_padding_mask.device
@@ -184,7 +188,7 @@ class Masking:
         # during training
         valid = ~src_key_padding_mask   # (B, C, L)
         # number of valid channels for each sample
-        num_c = (channel_idx.ne(-1) & valid.any(dim=2)).sum(dim=1)  # (B,)
+        num_c = (x_channel_idx.ne(-1) & valid.any(dim=2)).sum(dim=1)    # (B,)
 
         # for each sample, randomly mask tokens with 0 to p_point_mask ratio
         r = torch.rand((B, C, L), device=device)
@@ -208,14 +212,14 @@ class Masking:
         # for each sample, randomly select one channel to generate span 
         # mask that mask p_span_min to p_span_max continuous tokens
         # only span on valid channels with at least one valid token
-        span_c = channel_idx.ne(-1) & valid.any(dim=2)  # (B, C), bool
+        span_c = x_channel_idx.ne(-1) & valid.any(dim=2)    # (B, C), bool
         # only span sample that has candidate channels
-        span_s = span_c.any(dim=1).view(B, 1, 1)        # (B, 1, 1), bool
+        span_s = span_c.any(dim=1).view(B, 1, 1)            # (B, 1, 1), bool
         # for each sample, randomly select one condidate channel
         score = torch.rand(B, C, device=device)
         score = score.masked_fill(~span_c, float("-inf"))
-        span_c = score.argmax(dim=1)                    # (B,), long
-        span_c = torch.nn.functional.one_hot(           # (B, C, 1), bool
+        span_c = score.argmax(dim=1)                        # (B,), long
+        span_c = torch.nn.functional.one_hot(               # (B, C, 1), bool
             span_c, num_classes=C
         ).bool().unsqueeze(-1)
         # for each sample, calculate span mask positions
@@ -255,8 +259,8 @@ class Masking:
 
 if __name__ == "__main__":
     x = torch.randn(2, 4, 10, 10)
-    channel_idx = torch.tensor([[0, 1, -1, 3], [-1, -1, 2, -1]])
-    src_key_padding_mask, mask = Masking.maskingContrastive_(x, channel_idx)
-    print(channel_idx)  # test if channel_idx is changed in-place
+    x_channel_idx = torch.tensor([[0, 1, -1, 3], [-1, -1, 2, -1]])
+    src_key_padding_mask, mask = Masking.maskingContrastive_(x, x_channel_idx)
+    print(x_channel_idx)  # test if x_channel_idx is changed in-place
     print(src_key_padding_mask)
     print(mask)
