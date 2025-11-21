@@ -65,8 +65,9 @@ def train(config_name: str) -> None:
     )
     checkpoint = lightning.pytorch.callbacks.ModelCheckpoint(
         dirpath=os.path.join(config.trainer.ckpt_save_fold, config_name),
-        monitor=config.trainer.monitor,
-        save_top_k=config.trainer.save_top_k,
+        every_n_epochs=config.trainer.every_n_epochs,
+        filename="{epoch:04d}",
+        save_top_k=-1,
         save_last=True,
     )
     lrmonitor = lightning.pytorch.callbacks.LearningRateMonitor(

@@ -34,7 +34,7 @@ def ckptFinder(config: src.config.Config, epoch: int | None = None) -> str:
 # %% # config
 """ config """
 
-config = src.config.ConfigE01()     # .data and .model will be used
+config = src.config.ConfigE07()     # .data and .model will be used
 config.eval()
 config.trainer.ckpt_load_path = ckptFinder(config, epoch=None)
 print(f"load ckpt from {config.trainer.ckpt_load_path}")
@@ -48,7 +48,7 @@ profile_path = os.path.join(result_fold, "profile.csv")
 """ prediction """
 
 # data
-dm = src.data.DataModuleRaw(**dataclasses.asdict(config.data))
+dm = src.data.DataModuleReg(**dataclasses.asdict(config.data))
 dm.setup()
 # model
 model = src.model.SCOST(**dataclasses.asdict(config.model))
@@ -66,16 +66,17 @@ model = model.eval().to(device)
 result_b = []
 for batch in tqdm.tqdm(dm.test_dataloader()):
     # batch to device
-    x, channel_idx = batch
-    x, channel_idx = x.to(device), channel_idx.to(device)
+    x, channel_idx, y = batch
+    x, channel_idx, y = x.to(device), channel_idx.to(device), y.to(device)
     # forward
-    with torch.no_grad(): x_pred, _ = model.forwardReconstructionRaw(
-        x, channel_idx, user_mask=3
+    with torch.no_grad(): x_pred = model.forwardRegression(
+        x, channel_idx
     )
     # store result
     result_b.append(torch.cat([
-        x.detach().cpu(),                               # (B, 4, T)
-        x_pred[:, 3, :].detach().cpu().unsqueeze(1)     # (B, 1, T)
+        x.detach().cpu(),                       # (B, 4, T)
+        y.detach().cpu().unsqueeze(1),          # (B, 1, T)
+        x_pred.detach().cpu().unsqueeze(1),     # (B, 1, T)
     ], dim=1))
 result = torch.cat(result_b, dim=0)            # (N, 5, T)
 # map bp in 3nd and 4th channel to waveform before normalization
