@@ -1,4 +1,11 @@
-from .data  import *
-from .cal   import *
-from .raw   import *
-from .reg   import *
+from .cal       import DataModuleCal
+from .raw       import DataModuleRaw
+from .reg       import DataModuleReg
+from .combined  import DataModuleCombined
+
+__all__ = [
+    "DataModuleCal",
+    "DataModuleRaw",
+    "DataModuleReg",
+    "DataModuleCombined",
+]

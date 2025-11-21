@@ -1,1 +1,3 @@
-from .scost import SCOST
+from .model import SCOST
+
+__all__ = ["SCOST"]

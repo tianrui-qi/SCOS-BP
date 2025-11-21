@@ -1,9 +1,6 @@
 import torch
 
 
-__all__ = ["Embedding"]
-
-
 class Embedding(torch.nn.Module):
     def __init__(
         self, D: int, S: int, C_max: int, L_max: int, dropout: float = 0.1

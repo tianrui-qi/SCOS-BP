@@ -1,9 +1,6 @@
 import torch
 
 
-__all__ = ["Masking"]
-
-
 class Masking:
     @staticmethod
     def masking(

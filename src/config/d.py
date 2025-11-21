@@ -1,7 +1,7 @@
 from .config import Config
 
 
-__all__ = ["ConfigD03"]
+__all__ = []
 
 
 class ConfigD(Config):
@@ -9,10 +9,8 @@ class ConfigD(Config):
         super().__init__()
         self.data.enable = (False, False, True, False)
         self.data.channel_shift = 25
-        self.data.num_workers = 0
         self.model.S = 100
         self.model.stride = 25
-        self.runner.step_size = 30
 
 
 """
@@ -24,7 +22,7 @@ First, we validate on split02 (joint) to make sure everything works well.
 class ConfigD01(ConfigD):
     def __init__(self):
         super().__init__()
-        self.data.split = "split02"
+        self.data.split_type = "SubjectDependent"
         self.data.channel_drop = 0.5
         self.trainer.max_epochs = 2640
 
@@ -32,7 +30,7 @@ class ConfigD01(ConfigD):
 class ConfigD02(ConfigD):
     def __init__(self):
         super().__init__()
-        self.data.split = "split02"
+        self.data.split_type = "SubjectDependent"
         self.runner.p_span_large = (0.5, 1.0)
         self.trainer.ckpt_load_path = "ckpt/ConfigD01/last.ckpt"
         self.trainer.resume = True
@@ -69,7 +67,7 @@ Try to solve calibration problem by put condition 1 data into training as well.
 class ConfigD05(ConfigD):
     def __init__(self):
         super().__init__()
-        self.data.split = "split03"
+        self.data.split_type = "split03"    # type: ignore # not support anymore
         self.data.channel_perm = False
         self.data.channel_drop = 0.5
         self.runner.p_point = 0.05

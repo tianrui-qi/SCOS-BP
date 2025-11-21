@@ -1,18 +1,16 @@
 from .config import Config
 
 
-__all__ = []
-
-
 class ConfigB01(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split01"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.2,  0.8,  0.0)
         self.runner.lr = 0.001
+        self.runner.step_size = 20
         self.trainer.max_epochs = 4240
 
 
@@ -26,12 +24,13 @@ much on reconstruction.
 class ConfigB02(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split01"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.5,  0.5,  0.0)
         self.runner.lr = 0.0005
+        self.runner.step_size = 20
         self.trainer.max_epochs = 4055
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB01/last.ckpt"
@@ -53,14 +52,15 @@ Now, we finetune with regression task.
 class ConfigB03(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split01"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 4
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.0,  0.0,  1.0)
         self.runner.lr = 0.0001
+        self.runner.step_size = 20
         self.trainer.max_epochs = 2105
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB01/epoch=1162-step=46520.ckpt"
@@ -69,14 +69,15 @@ class ConfigB03(Config):
 class ConfigB04(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split01"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.0,  0.0,  1.0)
         self.runner.lr = 0.0001
+        self.runner.step_size = 20
         self.trainer.max_epochs = 3470
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB03/last.ckpt"
@@ -96,25 +97,29 @@ and control variables.
 class ConfigB05(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.0,  1.0,  0.0)
+        self.runner.step_size = 20
         self.trainer.max_epochs = 3620
 
 
 class ConfigB06(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         self.data.batch_size = 1024
         self.data.num_workers = 16
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (False, True, False)
         self.runner.weight = (  0.0,  1.0,   0.0)
         self.runner.lr = 0.0005
+        self.runner.step_size = 20
         self.trainer.max_epochs = 4861
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB05/last.ckpt"
@@ -128,8 +133,9 @@ After pretrain only with reconstruction, we finetune by regression task.
 class ConfigB07(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         self.data.batch_size = 1024
         self.data.num_workers = 16
         self.runner.freeze_embedding = True
@@ -137,6 +143,7 @@ class ConfigB07(Config):
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
+        self.runner.step_size = 20
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB06/epoch=1004-step=10050.ckpt"
 
@@ -144,8 +151,9 @@ class ConfigB07(Config):
 class ConfigB08(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         self.data.batch_size = 1024
         self.data.num_workers = 16
         self.runner.freeze_embedding = True
@@ -154,6 +162,7 @@ class ConfigB08(Config):
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.lr = 0.001
+        self.runner.step_size = 20
         self.trainer.max_epochs = 3205
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB07/last.ckpt"
@@ -162,8 +171,9 @@ class ConfigB08(Config):
 class ConfigB09(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         self.data.batch_size = 1024
         self.data.num_workers = 16
         self.runner.freeze_embedding = True
@@ -172,6 +182,7 @@ class ConfigB09(Config):
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.lr = 0.001
+        self.runner.step_size = 20
         self.trainer.max_epochs = 490
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB08/last.ckpt"
@@ -196,8 +207,9 @@ for enable and weight, now we have four tasks and the order is:
 class ConfigB10(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         self.data.batch_size = 1024
         self.data.num_workers = 16
         self.runner.freeze_embedding = True
@@ -206,6 +218,7 @@ class ConfigB10(Config):
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.lr = 0.01
+        self.runner.step_size = 20
         self.trainer.max_epochs = 3195
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB06/epoch=1004-step=10050.ckpt"
@@ -223,13 +236,15 @@ to ConfigB09, we open more layers to train.
 class ConfigB11(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 1
         # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, True, True)
         self.runner.weight = (  0.0,  1.0,  1.0)
+        self.runner.step_size = 20
         self.trainer.max_epochs = 425
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB10/last.ckpt"
@@ -249,13 +264,15 @@ To check which factor cause the improvement, we perform a ablation study.
 class ConfigB12(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 1
         # [Contrastive, ReconstructionRaw, RegressionSingle]
         self.runner.enable = (False, True, True)
         self.runner.weight = (  0.0,  1.0,  1.0)
+        self.runner.step_size = 20
         self.trainer.max_epochs = 434
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB08/last.ckpt"
@@ -383,13 +400,15 @@ future experiments.
 class ConfigB22(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
         # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
+        self.runner.step_size = 20
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB16/last.ckpt"
         self.trainer.resume = True
@@ -406,22 +425,26 @@ pretrain.
 class ConfigB23(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
+        self.runner.step_size = 20
         self.trainer.max_epochs = 7580
 
 
 class ConfigB24(Config):
     def __init__(self):
         super().__init__()
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.y_as_channel = False
+        self.data.split_type = "SubjectDependent"
         # [Contrastive, ReconstructionRaw, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
+        self.runner.step_size = 20
         self.trainer.ckpt_load_path = \
             "ckpt/ConfigB23/last.ckpt"
 

@@ -1,82 +1,39 @@
 import torch
-import lightning
-import pandas as pd
 
-import os
+from .data import DataModule
 
 
-__all__ = ["RawDataModule", "RawDataset"]
-
-
-class RawDataModule(lightning.LightningDataModule):
+class DataModuleRaw(DataModule):
     def __init__(
-        self, 
-        data_load_fold: str, split: str,
-        # augment
-        channel_perm: bool, channel_drop: float, channel_shift: float,
-        # dataloader
-        batch_size: int, num_workers: int,
+        self,
+        channel_perm: bool = False, 
+        channel_drop: float = 0, 
+        channel_shift: float = 0,
         **kwargs
     ) -> None:
-        super().__init__()
-        self.x_load_path = os.path.join(data_load_fold, 'x.pt')
-        self.sample_load_path = os.path.join(data_load_fold, 'sample.csv')
-        self.split = split
-        # augment
+        super().__init__(**kwargs)
         self.channel_perm = channel_perm
         self.channel_drop = channel_drop
         self.channel_shift = channel_shift
-        # dataloader
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-        self.pin_memory = torch.cuda.is_available()
-        self.persistent_workers = self.num_workers > 0
 
-    def setup(self, stage=None) -> None:
-        # load
-        x = torch.load(self.x_load_path, weights_only=True)     # (N, C, T)
-        sample = pd.read_csv(self.sample_load_path)
-        # normalize each channel
-        mean = torch.nanmean(x, dim=(0, 2))
-        mean2 = torch.nanmean(x * x, dim=(0, 2))
-        std = torch.sqrt(mean2 - mean * mean)
-        x = (x - mean.view(1, -1, 1)) / std.view(1, -1, 1)
+    def setup(self, stage: str | None = None) -> None:
+        super().setup(stage)
         # dataset
-        self.train_dataset = RawDataset(
-            x[sample[self.split] == 0],
+        self.train_dataset = DatasetRaw(
+            self.x[(self.profile["split"] == 0).to_numpy()], 
             channel_perm=self.channel_perm, 
             channel_drop=self.channel_drop,
             channel_shift=self.channel_shift,
         )
-        self.val_dataset   = RawDataset(x[sample[self.split] == 1])
-        self.test_dataset  = RawDataset(x[sample[self.split] == 2])
-
-    def train_dataloader(self) -> torch.utils.data.DataLoader:
-        return torch.utils.data.DataLoader(
-            self.train_dataset, shuffle=True, 
-            batch_size=self.batch_size, num_workers=self.num_workers, 
-            pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers
+        self.val_dataset   = DatasetRaw(
+            self.x[(self.profile["split"] == 1).to_numpy()], 
         )
-
-    def val_dataloader(self) -> torch.utils.data.DataLoader:
-        return torch.utils.data.DataLoader(
-            self.val_dataset, shuffle=False, 
-            batch_size=self.batch_size, num_workers=self.num_workers, 
-            pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers
-        )
-
-    def test_dataloader(self) -> torch.utils.data.DataLoader:
-        return torch.utils.data.DataLoader(
-            self.test_dataset, shuffle=False, 
-            batch_size=self.batch_size, num_workers=self.num_workers, 
-            pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers
+        self.test_dataset  = DatasetRaw(
+            self.x, 
         )
 
 
-class RawDataset(torch.utils.data.Dataset):
+class DatasetRaw(torch.utils.data.Dataset):
     def __init__(
         self, 
         x: torch.Tensor,        # (N, C, T)
@@ -103,7 +60,7 @@ class RawDataset(torch.utils.data.Dataset):
         )
         x_channel_idx[torch.all(torch.isnan(x), dim=-1)] = -1
         # augment x
-        x, x_channel_idx = RawDataset.augment(
+        x, x_channel_idx = DatasetRaw.augment(
             x, x_channel_idx, 
             channel_perm=self.channel_perm, 
             channel_drop=self.channel_drop, 
