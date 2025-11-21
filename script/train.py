@@ -18,7 +18,7 @@ lightning.seed_everything(42, workers=True, verbose=False)
 def main() -> None:
     args = getArgs()
     for config_name in args.config_name: 
-        print(f"=====[{config_name}]=====")
+        print(f"{'=' * 20}[{config_name}]{'=' * 20}")
         train(config_name)
 
 
@@ -41,7 +41,7 @@ def train(config_name: str) -> None:
     # config
     config: src.config.Config = getattr(src.config, config_name)()
     # data
-    data = src.data.DataModule(**dataclasses.asdict(config.data))
+    data = src.data.DataModuleCombined(**dataclasses.asdict(config.data))
     # model
     model = src.model.SCOST(**dataclasses.asdict(config.model))
     if not config.trainer.resume and \

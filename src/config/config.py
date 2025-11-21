@@ -1,7 +1,6 @@
 import dataclasses
 
-
-__all__ = ["Config"]
+from typing import Literal
 
 
 class Config():
@@ -11,25 +10,49 @@ class Config():
         self.runner: ConfigRunner = ConfigRunner()
         self.trainer: ConfigTrainer = ConfigTrainer()
 
+    def eval(self):
+        self.data.filter_level = "All"
+        # PyTorch uses the spawn start method on macOS/Windows
+        # if a script creates a DataLoader with num_workers > 0 outside
+        # an if __name__ == "__main__": guard, each worker will re-import the
+        # main script and recursively launch new workers, causing a crash
+        self.data.num_workers = 0
+        # we already close perturb and augment when using test_dataloader
+        # close them again as a backup
+        self.data.a_range = None
+        self.data.b_range = None
+        self.data.channel_perm = False
+        self.data.channel_drop = 0
+        self.data.channel_shift = 0
+
 
 @dataclasses.dataclass(slots=True)
 class ConfigData():
     enable: tuple[bool, ...] = (True, False, True, False)
-    # datamodule
-    data_load_fold: str = "data/wave2wave/"
-    split: str = "split01"
+    # data
+    data_load_path: str = "data/wave2wave.mat"
+    y_as_channel: bool = True
+    # normalize
+    mu: float | None = 115.0    # set to None if want per-subject mu
+    sd: float | None = 20.0     # set to None if want per-subject sd
+    # split
+    split_type: Literal[
+        "SubjectDependent", "SubjectIndependent"
+    ] | None = "SubjectIndependent"
+    split_ratio: tuple[float, float, float] = (0.5, 0.2, 0.3)
+    # filter
+    filter_level: Literal["X", "Y", "XY", "All"] | None = None
+    # dataloader
+    batch_size: int = 256
+    num_workers: int = 8
     # perturb
-    P: int = 64
-    channel_idx_bp: int = 3
-    a_range: tuple[float, float] | float = (0.5, 1.5)
-    b_range: tuple[float, float] | float = (-2.0, 2.0)
+    P: int = 32
+    a_range: tuple[float, float] | float | None = (0.5, 1.5)
+    b_range: tuple[float, float] | float | None = (-2.0, 2.0)
     # augment
     channel_perm: bool = True
     channel_drop: float = 1     # probability of enable channel drop
     channel_shift: float = 0
-    # dataloader
-    batch_size: int = 256
-    num_workers: int = 8
 
 
 @dataclasses.dataclass(slots=True)
@@ -65,7 +88,7 @@ class ConfigRunner():
     p_keep: float = 0.1
     # optimizer
     lr: float = 0.005
-    step_size: int = 20
+    step_size: int = 30
     gamma: float = 0.98
 
 

@@ -1,10 +1,7 @@
 import torch
 import lightning
 
-from .model import SCOST
-
-
-__all__ = ["Runner"]
+from ..model import SCOST
 
 
 class Runner(lightning.LightningModule):

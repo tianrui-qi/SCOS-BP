@@ -12,9 +12,6 @@ from .head import (
 )
 
 
-__all__ = ["SCOST"]
-
-
 class SCOST(torch.nn.Module):
     def __init__(
         self, D: int, 

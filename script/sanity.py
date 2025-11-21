@@ -14,18 +14,16 @@ lightning.seed_everything(42, workers=True, verbose=False)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--step", type=int, default=8000)
+    ap.add_argument("--step", type=int, default=1000)
     args = ap.parse_args()
     # config
     config = src.config.Config()
-    config.data.channel_perm = False    # no channel perm for debugging
-    config.data.channel_drop = False    # no channel drop for debugging
-    config.data.batch_size = 1          # small batch for debugging
+    config.eval()   # turn off all augmentations
     if torch.cuda.is_available(): device = "cuda"
     elif torch.backends.mps.is_available(): device = "mps"
     else: device = "cpu"
     # data, fixed at first batch
-    dm = src.data.RawDataModule(**dataclasses.asdict(config.data))
+    dm = src.data.DataModuleRaw(**dataclasses.asdict(config.data))
     dm.setup()
     x, channel_idx = next(iter(dm.train_dataloader()))
     x, channel_idx = x.to(device), channel_idx.to(device)

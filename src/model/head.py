@@ -1,14 +1,6 @@
 import torch
 
 
-__all__ = [
-    "HeadContrastive",
-    "HeadReconstructionCal",
-    "HeadReconstructionRaw",
-    "HeadRegression",
-]
-
-
 class HeadContrastive(torch.nn.Module):
     def __init__(self, D: int) -> None:
         super().__init__()

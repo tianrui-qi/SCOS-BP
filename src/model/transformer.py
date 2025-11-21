@@ -1,9 +1,6 @@
 import torch
 
 
-__all__ = ["Transformer"]
-
-
 class Transformer(torch.nn.Module):
     def __init__(
         self, D: int, num_layers: int, nhead: int, dim_feedforward: int,

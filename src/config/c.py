@@ -1,29 +1,22 @@
 from .config import Config
 
 
-__all__ = []
-
-
 class ConfigCp(Config):
     def __init__(self):
         super().__init__()
         self.data.enable = (False, False, True, False)
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
-        self.data.num_workers = 0
-        self.runner.step_size = 30
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.split_type = "SubjectDependent"
 
 
 class ConfigCf(Config):
     def __init__(self):
         super().__init__()
         self.data.enable = (False, False, False, True)
-        self.data.data_load_fold = "data/wave2value/"
-        self.data.split = "split02"
-        self.data.num_workers = 0
+        self.data.data_load_path = "data/wave2value.mat"
+        self.data.split_type = "SubjectDependent"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
-        self.runner.step_size = 30
 
 
 """
@@ -234,7 +227,7 @@ where train and valid's subject are joint.
 class ConfigC20(ConfigCp):
     def __init__(self):
         super().__init__()
-        self.data.split = "split01"
+        self.data.split_type = "SubjectIndependent"
         self.model.S = 100
         self.model.stride = 25
 
@@ -242,7 +235,7 @@ class ConfigC20(ConfigCp):
 class ConfigC21(ConfigCf):
     def __init__(self):
         super().__init__()
-        self.data.split = "split01"
+        self.data.split_type = "SubjectIndependent"
         self.model.S = 100
         self.model.stride = 25
         self.trainer.ckpt_load_path = "ckpt/ConfigC20/last.ckpt"
@@ -257,7 +250,7 @@ subjects?
 class ConfigC22(ConfigCf):
     def __init__(self):
         super().__init__()
-        self.data.split = "split01"
+        self.data.split_type = "SubjectIndependent"
         self.model.S = 100
         self.model.stride = 25
         self.trainer.ckpt_load_path = "ckpt/ConfigC08/last.ckpt"

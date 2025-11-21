@@ -1,9 +1,6 @@
 import torch
 
 
-__all__ = ["Tokenizer"]
-
-
 class Tokenizer:
     def __init__(self, segment_length: int, segment_stride: int) -> None:
         self.segment_length = segment_length

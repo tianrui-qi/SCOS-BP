@@ -1,109 +1,87 @@
 import torch
-import lightning
 import pandas as pd
 
-import os
+from .data import DataModule
 
 
-__all__ = ["CalDataModule", "CalDataset"]
-
-
-class CalDataModule(lightning.LightningDataModule):
+class DataModuleCal(DataModule):
     def __init__(
         self, 
-        data_load_fold: str, split: str,
-        # perturb
-        P: int, channel_idx_bp: int,
-        a_range: tuple[float, float] | float | None, 
-        b_range: tuple[float, float] | float | None,
-        # augment
-        channel_perm: bool, channel_drop: float, channel_shift: float,
-        # dataloader
-        batch_size: int, num_workers: int,
+        P: int = 32,
+        channel_idx_bp: int = 3,
+        a_range: tuple[float, float] | float | None = None,
+        b_range: tuple[float, float] | float | None = None,
+        channel_perm: bool = False, 
+        channel_drop: float = 0, 
+        channel_shift: float = 0,
         **kwargs
     ) -> None:
-        super().__init__()
-        self.x_load_path = os.path.join(data_load_fold, 'x.pt')
-        self.sample_load_path = os.path.join(data_load_fold, 'sample.csv')
-        self.split = split
-        # perturb
+        super().__init__(**kwargs)
         self.P = P
         self.channel_idx_bp = channel_idx_bp
         self.a_range = a_range
         self.b_range = b_range
-        # augment
         self.channel_perm = channel_perm
         self.channel_drop = channel_drop
         self.channel_shift = channel_shift
-        # dataloader
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-        self.pin_memory = torch.cuda.is_available()
-        self.persistent_workers = self.num_workers > 0
 
-    def setup(self, stage=None) -> None:
-        # load
-        x = torch.load(self.x_load_path, weights_only=True)
-        sample = pd.read_csv(self.sample_load_path)
-        # normalize each channel
-        mean = torch.nanmean(x, dim=(0, 2))
-        mean2 = torch.nanmean(x * x, dim=(0, 2))
-        std = torch.sqrt(mean2 - mean * mean)
-        x = (x - mean.view(1, -1, 1)) / std.view(1, -1, 1)
+    def setup(self, stage: str | None = None) -> None:
+        super().setup(stage)
         # dataset
-        self.train_dataset = CalDataset(
-            x[sample[self.split] == 0], sample[sample[self.split] == 0],
+        self.train_dataset = DatasetCal(
+            self.x[(self.profile["split"] == 0).to_numpy()], 
+            self.profile[self.profile["split"] == 0],
             channel_perm=self.channel_perm, 
             channel_drop=self.channel_drop,
             channel_shift=self.channel_shift,
-            P=self.P,
+            P=self.P, 
             channel_idx_bp=self.channel_idx_bp,
-            a_range=self.a_range,
+            a_range=self.a_range, 
             b_range=self.b_range,
         )
-        self.val_dataset   = CalDataset(
-            x[sample[self.split] == 1], sample[sample[self.split] == 1],
+        self.val_dataset   = DatasetCal(
+            self.x[(self.profile["split"] == 1).to_numpy()], 
+            self.profile[self.profile["split"] == 1],
             P=self.P,
             channel_idx_bp=self.channel_idx_bp,
         )
-        self.test_dataset  = CalDataset(
-            x[sample[self.split] == 2], sample[sample[self.split] == 2],
+        self.test_dataset  = DatasetCal(
+            self.x,
+            self.profile,
             P=self.P,
             channel_idx_bp=self.channel_idx_bp,
         )
 
-    def train_dataloader(self) -> torch.utils.data.DataLoader:
-        return torch.utils.data.DataLoader(
-            self.train_dataset, shuffle=True, 
-            batch_size=self.batch_size, num_workers=self.num_workers, 
-            pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers
-        )
-
-    def val_dataloader(self) -> torch.utils.data.DataLoader:
-        return torch.utils.data.DataLoader(
-            self.val_dataset, shuffle=False, 
-            batch_size=self.batch_size, num_workers=self.num_workers, 
-            pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers
-        )
-
-    def test_dataloader(self) -> torch.utils.data.DataLoader:
-        return torch.utils.data.DataLoader(
-            self.test_dataset, shuffle=False, 
-            batch_size=self.batch_size, num_workers=self.num_workers, 
-            pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers
-        )
+    def filter_(self, full_channel: bool = False) -> None:
+        super().filter_(full_channel=full_channel)
+        # initialize
+        # remove all samples that do not have valid bp channel
+        valid = ~torch.isnan(self.x[:, self.channel_idx_bp]).all(dim=1)
+        self.x = self.x[valid]
+        self.profile = self.profile.iloc[valid.numpy()].reset_index(drop=True)
+        # calibration data group by subject
+        # note that invalid subject will not include in self.c
+        c = {
+            s: x_s 
+            for s, sample_s in (
+                self.profile[self.profile["condition"] == 1].groupby("subject")
+            )
+            for x_s in [self.x[sample_s.index.values]]
+            if not torch.isnan(x_s[:, self.channel_idx_bp]).all(dim=1).all()
+        }
+        # for subject not in c, remove that from x, sample
+        valid = self.profile["subject"].isin(c.keys()).to_numpy()
+        self.x = self.x[valid]
+        self.profile = self.profile.iloc[valid].reset_index(drop=True)
 
 
-class CalDataset(torch.utils.data.Dataset):
+class DatasetCal(torch.utils.data.Dataset):
     def __init__(
         self, 
         x: torch.Tensor,    # (N, C, T)
-        sample: pd.DataFrame, 
+        profile: pd.DataFrame, 
         # perturb
-        P: int = 64,
+        P: int = 32,
         channel_idx_bp: int = 3,
         a_range: tuple[float, float] | float | None = None,
         b_range: tuple[float, float] | float | None = None,
@@ -115,7 +93,7 @@ class CalDataset(torch.utils.data.Dataset):
         # data
         self.x = x          # (N, C, T)
         self.c = {}
-        self.sample = sample
+        self.profile = profile
         # perturb
         self.P = P
         self.channel_idx_bp = channel_idx_bp
@@ -125,25 +103,6 @@ class CalDataset(torch.utils.data.Dataset):
         self.channel_perm = channel_perm
         self.channel_drop = channel_drop
         self.channel_shift = channel_shift
-        # initialize
-        # remove all the samples that do not have valid bp channel
-        valid = ~torch.isnan(self.x[:, self.channel_idx_bp]).all(dim=1)
-        self.x = self.x[valid]
-        self.sample = self.sample.iloc[valid.numpy()].reset_index(drop=True)
-        # calibration data group by subject
-        # note that invalid subject will not include in self.c
-        self.c = {
-            s: x_s 
-            for s, sample_s in (
-                self.sample[self.sample["condition"] == 1].groupby("subject")
-            )
-            for x_s in [self.x[sample_s.index.values]]
-            if not torch.isnan(x_s[:, self.channel_idx_bp]).all(dim=1).all()
-        }
-        # for subject not in self.c, remove that from x, sample
-        valid = self.sample["subject"].isin(self.c.keys()).to_numpy()
-        self.x = self.x[valid]
-        self.sample = self.sample.iloc[valid].reset_index(drop=True)
 
     def __len__(self) -> int:
         return len(self.x)
@@ -156,7 +115,7 @@ class CalDataset(torch.utils.data.Dataset):
         )
         x_channel_idx[torch.all(torch.isnan(x), dim=-1)] = -1
         # c
-        c = self.c[self.sample.loc[i, "subject"]].clone()                            
+        c = self.c[self.profile.loc[i, "subject"]].clone()                            
         c = c[torch.randint(    # (P, C, T)
             low=0, high=len(c), size=(self.P,), device=x.device
         )]
@@ -167,18 +126,18 @@ class CalDataset(torch.utils.data.Dataset):
         c_channel_idx[torch.all(torch.isnan(c), dim=-1)] = -1
         # perturb
         y = x.clone()
-        y_bp, a, b = CalDataset.perturb(
+        y_bp, a, b = DatasetCal.perturb(
             x[self.channel_idx_bp].unsqueeze(0),
             a_range=self.a_range,
             b_range=self.b_range,
         )
         y[self.channel_idx_bp] = y_bp.squeeze(0)
-        c[:, self.channel_idx_bp, :], _, _ = CalDataset.perturb(
+        c[:, self.channel_idx_bp, :], _, _ = DatasetCal.perturb(
             c[:, self.channel_idx_bp, :],
             a_range=a,
             b_range=b,
         )
-        x[self.channel_idx_bp], _, _ = CalDataset.perturb(
+        x[self.channel_idx_bp], _, _ = DatasetCal.perturb(
             x[self.channel_idx_bp].unsqueeze(0),
             a_range=self.a_range,
             b_range=self.b_range,
@@ -188,7 +147,7 @@ class CalDataset(torch.utils.data.Dataset):
         # can drop channel for c since in reality our data for calibration
         # may not have all channels
         for p in range(self.P):
-            c[p], c_channel_idx[p] = CalDataset.augment(
+            c[p], c_channel_idx[p] = DatasetCal.augment(
                 c[p], c_channel_idx[p], 
                 channel_perm=self.channel_perm, 
                 channel_drop=self.channel_drop, 
