@@ -97,7 +97,6 @@ class ConfigTrainer():
     max_epochs: int = 10000
     log_save_fold: str = "log/"
     ckpt_save_fold: str = "ckpt/"
-    monitor: str = "loss/valid"
-    save_top_k: int = 10
+    every_n_epochs: int = 100
     ckpt_load_path: str | None = None
     resume: bool = False

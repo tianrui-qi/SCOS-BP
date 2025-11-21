@@ -58,14 +58,14 @@ class HeadReconstructionRaw(torch.nn.Module):
 
 
 class HeadRegression(torch.nn.Module):
-    def __init__(self, D: int, out_dim: int) -> None:
+    def __init__(self, D: int, S: int) -> None:
         super().__init__()
         self.mlp = torch.nn.Sequential(
-            torch.nn.Linear(D, 2*D),
+            torch.nn.LayerNorm(D),
+            torch.nn.Linear(D, D),
             torch.nn.GELU(),
-            torch.nn.Linear(2*D, 2*D),
-            torch.nn.GELU(),
-            torch.nn.Linear(2*D, out_dim)
+            torch.nn.Dropout(0.1),
+            torch.nn.Linear(D, S)
         )
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.mlp(x)  # (B, D) -> (B, out_dim)
+        return self.mlp(x)  # (..., D) -> (..., S)

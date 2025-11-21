@@ -132,41 +132,17 @@ class Runner(lightning.LightningModule):
 
     def _stepReconstructionRaw(self, batch, stage):
         x, x_channel_idx = batch
-        if stage == "train":
-            x, y = (    # (#mask, S), (#mask, S)
-                self.model.forwardReconstructionRaw(
-                    x, x_channel_idx,
-                    p_point=self.p_point,
-                    p_span_small=self.p_span_small,
-                    p_span_large=self.p_span_large,
-                    p_hide=self.p_hide,
-                    p_keep=self.p_keep,
-                )
+        x, y = (    # (#mask, S), (#mask, S)
+            self.model.forwardReconstructionRaw(
+                x, x_channel_idx,
+                p_point=self.p_point,
+                p_span_small=self.p_span_small,
+                p_span_large=self.p_span_large,
+                p_hide=self.p_hide,
+                p_keep=self.p_keep,
             )
-            loss = torch.nn.functional.smooth_l1_loss(x, y)
-        else:
-            x, y = (    # (B, C, T), (B, C, T)
-                self.model.forwardReconstructionRaw(
-                    x, x_channel_idx,
-                    user_mask=3,
-                )
-            )
-            true_min = y[:, 3, :].min(dim=-1).values
-            true_max = y[:, 3, :].max(dim=-1).values
-            pred_min = x[:, 3, :].min(dim=-1).values
-            pred_max = x[:, 3, :].max(dim=-1).values
-            mask = ~(
-                torch.isnan(true_min) | torch.isnan(true_max) | 
-                torch.isnan(pred_min) | torch.isnan(pred_max)
-            )
-            true_min = true_min[mask]
-            true_max = true_max[mask]
-            pred_min = pred_min[mask]
-            pred_max = pred_max[mask]
-            loss = (
-                torch.nn.functional.l1_loss(pred_min, true_min) +
-                torch.nn.functional.l1_loss(pred_max, true_max)
-            ) * 0.5 if mask.sum() > 0 else x.new_tensor(0.0)
+        )
+        loss = torch.nn.functional.smooth_l1_loss(x, y)
         self.log(
             f"loss/reconstruction/{stage}", loss, 
             on_step=False, on_epoch=True, logger=True
