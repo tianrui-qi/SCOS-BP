@@ -8,7 +8,7 @@ class Runner(lightning.LightningModule):
     def __init__(
         self, 
         model: SCOST, 
-        freeze_embedding: bool, freeze_transformer: int,
+        freeze_embedding: bool, freeze_transformer: int, freeze_head: bool,
         enable: tuple[bool, ...], weight: tuple[float, ...], 
         T: float = 0.2,
         p_point: float = 0.2, 
@@ -20,7 +20,7 @@ class Runner(lightning.LightningModule):
         super().__init__()
         # model
         self.model = model
-        self.model.freeze(freeze_embedding, freeze_transformer)
+        self.model.freeze(freeze_embedding, freeze_transformer, freeze_head)
         # loss
         self.register_buffer("weight", torch.tensor(
             [w for w, e in zip(weight, enable) if e], dtype=torch.float

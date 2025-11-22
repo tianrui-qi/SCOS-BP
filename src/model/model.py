@@ -5,6 +5,7 @@ from .masking import Masking
 from .embedding import Embedding
 from .transformer import Transformer
 from .head import (
+    HeadAdapter,
     HeadContrastive, 
     HeadReconstructionCal,
     HeadReconstructionRaw, 
@@ -20,18 +21,23 @@ class SCOST(torch.nn.Module):
         num_layers: int, nhead: int, dim_feedforward: int,
     ) -> None:
         super().__init__()
-        # modules
+        # backbone
         self.tokenizer = Tokenizer(segment_length=S, segment_stride=stride)
         self.embedding = Embedding(D, S, C_max, L_max)
         self.transformer = Transformer(D, num_layers, nhead, dim_feedforward)
-        # head
+        # adapter for subject-specific finetune
+        self.head_adapter = HeadAdapter(D)
+        # heads for different pretext tasks
         self.head_contrastive = HeadContrastive(D)
         self.head_recon_cal = HeadReconstructionCal(D, S)
         self.head_recon_raw = HeadReconstructionRaw(D, S)
         self.head_regression = HeadRegression(D, S)
 
     def freeze(
-        self, freeze_embedding: bool = False, freeze_transformer: int = 0,
+        self, 
+        freeze_embedding: bool = False, 
+        freeze_transformer: int = 0,
+        freeze_head: bool = False,
     ) -> None:
         if freeze_embedding:
             for param in self.embedding.parameters():
@@ -41,6 +47,15 @@ class SCOST(torch.nn.Module):
                 if i < freeze_transformer:
                     for param in layer.parameters():
                         param.requires_grad = False
+        if freeze_head:
+            for param in self.head_contrastive.parameters():
+                    param.requires_grad = False
+            for param in self.head_recon_cal.parameters():
+                    param.requires_grad = False
+            for param in self.head_recon_raw.parameters():
+                    param.requires_grad = False
+            for param in self.head_regression.parameters():
+                    param.requires_grad = False
 
     def forward(
         self, 
@@ -217,6 +232,7 @@ class SCOST(torch.nn.Module):
         user_src_key_padding_mask: (
             int | list[int] | tuple[int, ...] | torch.Tensor | None
         ) = None,
+        adapter: bool = False,
     ) -> torch.Tensor:
         B, C, T = x.shape
         x = self.forward(               # (B, C*L, D)
@@ -227,6 +243,8 @@ class SCOST(torch.nn.Module):
         )
         x = x.reshape(B, C, -1, x.shape[-1])    # (B, C, L, D)
         x = x.mean(1)                   # (B, L, D)
+        if adapter: 
+            x = self.head_adapter(x)    # (B, L, D)
         x = self.head_regression(x)     # (B, L, S)
         x = x.unsqueeze(1)              # (B, 1, L, S)
         x = self.tokenizer.backward(x)  # (B, 1, T)
