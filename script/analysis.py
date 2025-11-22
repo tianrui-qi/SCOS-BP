@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
 def ckptFinder(config: src.config.Config, epoch: int | None = None) -> str:
     root = config.trainer.ckpt_save_fold
     name = config.__class__.__name__
-    target = "last" if epoch is None else f"epoch={epoch}"
+    target = "last" if epoch is None else f"epoch={epoch:04d}"
     for f in os.listdir(os.path.join(root, name)):
         if target in f and f.endswith(".ckpt"):
             return os.path.join(root, name, f)

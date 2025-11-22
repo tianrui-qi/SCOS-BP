@@ -3,6 +3,8 @@ import pandas as pd
 
 from .data import DataModule
 
+from typing import Literal
+
 
 class DataModuleCal(DataModule):
     def __init__(
@@ -52,8 +54,10 @@ class DataModuleCal(DataModule):
             channel_idx_bp=self.channel_idx_bp,
         )
 
-    def filter_(self, full_channel: bool = False) -> None:
-        super().filter_(full_channel=full_channel)
+    def filter_(
+        self, filter_level: Literal["X", "Y", "XY", "All"] | None = None
+    ) -> None:
+        super().filter_(filter_level=filter_level)
         # initialize
         # remove all samples that do not have valid bp channel
         valid = ~torch.isnan(self.x[:, self.channel_idx_bp]).all(dim=1)
@@ -115,7 +119,7 @@ class DatasetCal(torch.utils.data.Dataset):
         )
         x_channel_idx[torch.all(torch.isnan(x), dim=-1)] = -1
         # c
-        c = self.c[self.profile.loc[i, "subject"]].clone()                            
+        c = self.c[self.profile.loc[i, "subject"]].clone()
         c = c[torch.randint(    # (P, C, T)
             low=0, high=len(c), size=(self.P,), device=x.device
         )]
@@ -163,7 +167,7 @@ class DatasetCal(torch.utils.data.Dataset):
             ).item()
             nan_x = torch.full_like(x, float('nan'))    # (C, T)
             nan_y = torch.full_like(y, float('nan'))    # (C, T)
-            nan_c = torch.full_like(c, float('nan'))    # (P, C, T)            
+            nan_c = torch.full_like(c, float('nan'))    # (P, C, T)
             if s > 0:
                 nan_x[..., s:] = x[..., :-s]
                 nan_y[..., s:] = y[..., :-s]
@@ -222,7 +226,9 @@ class DatasetCal(torch.utils.data.Dataset):
             valid_mask = x_channel_idx != -1
             valid_idx = torch.where(valid_mask)[0]
             # randomly keep k number of channels
-            k = torch.randint(1, len(valid_idx)+1, (1,), device=x.device).item()
+            k = torch.randint(
+                1, len(valid_idx)+1, (1,), device=x.device
+            ).item()
             perm = torch.randperm(len(valid_idx), device=x.device)
             keep_idx = valid_idx[perm][:k]
             # drop channels that valid but not keep

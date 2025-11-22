@@ -55,9 +55,10 @@ def train(config_name: str) -> None:
             if k.startswith("model.")
         }
         model.load_state_dict(state_dict, strict=False)
+    model = torch.compile(model)
     # runner
     runner = src.runner.Runner(
-        model=model, **dataclasses.asdict(config.runner)
+        model=model, **dataclasses.asdict(config.runner)    # type: ignore
     )
     # trainer
     logger = lightning.pytorch.loggers.TensorBoardLogger(
