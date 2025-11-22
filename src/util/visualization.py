@@ -144,7 +144,8 @@ class Visualization():
                             .astype(str)
                         )
                     else:
-                        df_long["_color_label"] = df_long[color_col].astype(str)
+                        df_long["_color_label"] = \
+                            df_long[color_col].astype(str)
                     color_vals = sorted(df_long["_color_label"].unique())
                 else:
                     df_long["_color_label"] = "all"
@@ -383,7 +384,8 @@ class Visualization():
                             name=pair_label_map[p],
                             showlegend=True,
                             legendgroup="scatter",
-                            legendgrouptitle_text="scatter" if i == 0 else None,
+                            legendgrouptitle_text=\
+                                "scatter" if i == 0 else None,
                         )
                     )
                 for c in color_vals:
@@ -429,10 +431,16 @@ class Visualization():
                     bp_pred = w[6]
                     bp_diff = np.abs(bp_true - bp_pred)
 
-                    mae_max = abs(float(bp_true.max()) - float(bp_pred.max()))
-                    mae_min = abs(float(bp_true.min()) - float(bp_pred.min()))
+                    mae_max = abs(
+                        float(bp_true.max()) - float(bp_pred.max())
+                    )
+                    mae_min = abs(
+                        float(bp_true.min()) - float(bp_pred.min())
+                    )
 
-                    wave_custom = np.stack([bp_true, bp_pred, bp_diff], axis=1)
+                    wave_custom = np.stack(
+                        [bp_true, bp_pred, bp_diff], axis=1
+                    )
 
                     with fig.batch_update():
                         # before
@@ -453,8 +461,12 @@ class Visualization():
                         fig.data[wave_trace_indices["ch0"]].y = w[0]
                         fig.data[wave_trace_indices["ch1"]].y = w[1]
                         fig.data[wave_trace_indices["ch2"]].y = w[2]
-                        fig.data[wave_trace_indices["bp_after_true"]].y = w[3]
-                        fig.data[wave_trace_indices["bp_after_pred"]].y = w[4]
+                        fig.data[
+                            wave_trace_indices["bp_after_true"]
+                        ].y = w[3]
+                        fig.data[
+                            wave_trace_indices["bp_after_pred"]
+                        ].y = w[4]
 
                         fig.update_layout(annotations=[dict(
                             xref="x2 domain", yref="y2 domain",
@@ -524,33 +536,43 @@ class Visualization():
         # X/Y dropdowns
         x1_dropdown = ipywidgets.Dropdown(
             options=numeric_cols, value="PredMinBP", description="x1",
-            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), style=CONTROL_STYLE,
+            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), 
+            style=CONTROL_STYLE,
         )
         y1_dropdown = ipywidgets.Dropdown(
             options=numeric_cols, value="(P-T)MinBP", description="y1",
-            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), style=CONTROL_STYLE,
+            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), 
+            style=CONTROL_STYLE,
         )
         x2_dropdown = ipywidgets.Dropdown(
             options=[None] + numeric_cols, value=None, description="x2",
-            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), style=CONTROL_STYLE,
+            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), 
+            style=CONTROL_STYLE,
         )
         y2_dropdown = ipywidgets.Dropdown(
             options=[None] + numeric_cols, value=None, description="y2",
-            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), style=CONTROL_STYLE,
+            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), 
+            style=CONTROL_STYLE,
         )
 
         color_dropdown = ipywidgets.Dropdown(
-            options=self.filter_cols, value="condition", description="color",
-            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), style=CONTROL_STYLE,
+            options=self.filter_cols, value="condition", 
+            description="color",
+            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), 
+            style=CONTROL_STYLE,
         )
 
         size_input = ipywidgets.BoundedIntText(
-            value=4, min=1, max=15, step=1, description="size",
-            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), style=CONTROL_STYLE,
+            value=4, min=1, max=15, step=1, 
+            description="size",
+            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), 
+            style=CONTROL_STYLE,
         )
         opacity_input = ipywidgets.BoundedFloatText(
-            value=0.7, min=0.1, max=1.0, step=0.05, description="opacity",
-            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), style=CONTROL_STYLE,
+            value=0.7, min=0.1, max=1.0, step=0.05, 
+            description="opacity",
+            layout=ipywidgets.Layout(width=UNIFIED_WIDTH), 
+            style=CONTROL_STYLE,
         )
 
         # Multi-selection filters
@@ -563,7 +585,9 @@ class Visualization():
                 options=options,
                 value=tuple(v for _, v in options),
                 description=col,
-                layout=ipywidgets.Layout(width=UNIFIED_WIDTH, height="125px"),
+                layout=ipywidgets.Layout(
+                    width=UNIFIED_WIDTH, height="125px"
+                ),
                 style=CONTROL_STYLE,
             )
             multi_filter_widgets[col] = sm

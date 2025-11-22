@@ -92,7 +92,9 @@ class DatasetRaw(torch.utils.data.Dataset):
             valid_mask = x_channel_idx != -1
             valid_idx = torch.where(valid_mask)[0]
             # randomly keep k number of channels
-            k = torch.randint(1, len(valid_idx)+1, (1,), device=x.device).item()
+            k = torch.randint(
+                1, len(valid_idx)+1, (1,), device=x.device
+            ).item()
             perm = torch.randperm(len(valid_idx), device=x.device)
             keep_idx = valid_idx[perm][:k]
             # drop channels that valid but not keep
