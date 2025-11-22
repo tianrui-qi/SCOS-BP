@@ -24,6 +24,10 @@ class Config():
         self.data.channel_perm = False
         self.data.channel_drop = 0
         self.data.channel_shift = 0
+        # freeze model parameters except adapter
+        self.runner.freeze_embedding = True
+        self.runner.freeze_transformer = 4  # freeze all layers
+        self.runner.freeze_head = True
 
 
 @dataclasses.dataclass(slots=True)
@@ -75,6 +79,7 @@ class ConfigRunner():
     # model
     freeze_embedding: bool = False
     freeze_transformer: int = 0
+    freeze_head: bool = False   # exclude adapter
     # loss
     enable: tuple[bool, ...] = (True, False, True, False)
     weight: tuple[float, ...] = (0.2, 0.0, 0.8, 0.0)

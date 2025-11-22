@@ -1,6 +1,15 @@
 import torch
 
 
+class HeadAdapter(torch.nn.Module):
+    def __init__(self, D: int) -> None:
+        super().__init__()
+        self.gamma = torch.nn.Parameter(torch.ones(1, 1, D))
+        self.beta  = torch.nn.Parameter(torch.zeros(1, 1, D))
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x * (1 + self.gamma) + self.beta     # (B, L, D) -> (B, L, D)
+
+
 class HeadContrastive(torch.nn.Module):
     def __init__(self, D: int) -> None:
         super().__init__()
