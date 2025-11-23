@@ -4,18 +4,24 @@ import lightning
 from ..model import SCOST
 
 
-class Runner(lightning.LightningModule):
+class Pretrain(lightning.LightningModule):
     def __init__(
         self, 
+        # model
         model: SCOST, 
         freeze_embedding: bool, freeze_transformer: int, freeze_head: bool,
+        # loss
         enable: tuple[bool, bool, bool], weight: tuple[float, float, float], 
+        # loss: contrastive
         T: float = 0.2,
+        # loss: reconstruction
         p_point: float = 0.2, 
         p_span_small: tuple[float, float] = (0.0, 0.5),
         p_span_large: tuple[float, float] = (0.0, 1.0),
         p_hide: float = 0.9, p_keep: float = 0.1,
-        lr: float = 0.005, step_size: int = 20, gamma: float = 0.98, 
+        # optimizer
+        lr: float = 0.005, step_size: int = 30, gamma: float = 0.98, 
+        **kwargs,
     ) -> None:
         super().__init__()
         # model
@@ -30,9 +36,9 @@ class Runner(lightning.LightningModule):
             self._stepReconstruction,
             self._stepRegression,
         ], enable) if e]
-        # contrastive 
+        # loss: contrastive 
         self.T = T
-        # reconstruction
+        # loss: reconstruction
         self.p_point = p_point
         self.p_span_small = p_span_small
         self.p_span_large = p_span_large

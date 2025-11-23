@@ -1,4 +1,4 @@
-config_name = "ConfigE03"
+config_name = "PretrainH"
 epoch = None
 
 
@@ -39,8 +39,7 @@ if torch.cuda.is_available(): device = "cuda"
 elif torch.backends.mps.is_available(): device = "mps"
 else: device = "cpu"
 # config
-config: src.config.Config = getattr(src.config, config_name)()
-config.eval()
+config: src.config.Config = getattr(src.config, config_name)().eval()
 config.trainer.ckpt_load_path = ckptFinder(config, epoch=epoch)
 print(f"load ckpt from {config.trainer.ckpt_load_path}")
 
@@ -53,7 +52,7 @@ profile_path = os.path.join(result_fold, "profile.csv")
 """ prediction """
 
 # data
-dm = src.data.Module(**dataclasses.asdict(config.data))
+dm = src.data.Pretrain(**dataclasses.asdict(config.data))
 dm.setup()
 # model
 model = src.model.SCOST(**dataclasses.asdict(config.model))

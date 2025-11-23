@@ -1,7 +1,6 @@
 import torch
 import lightning
 
-import argparse
 import warnings
 import dataclasses
 import matplotlib.pyplot as plt
@@ -17,11 +16,9 @@ warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--step", type=int, default=1000)
-    args = ap.parse_args()
+    step = 1000
     # config
-    config = src.config.Config()
+    config = src.config.PretrainT()
     config.eval()   # turn off all augmentations
     config.data.batch_size = 32
     # device
@@ -29,7 +26,7 @@ def main():
     elif torch.backends.mps.is_available(): device = "mps"
     else: device = "cpu"
     # data, fixed at first batch
-    dm = src.data.Module(**dataclasses.asdict(config.data))
+    dm = src.data.Pretrain(**dataclasses.asdict(config.data))
     dm.setup()
     x, channel_idx, _ = next(iter(dm.train_dataloader()))
     x, channel_idx = x.to(device), channel_idx.to(device)
@@ -38,15 +35,15 @@ def main():
     # train
     model.train()
     opt = torch.optim.Adam(model.parameters(), lr=config.runner.lr)
-    for step in range(args.step):
+    for s in range(step):
         opt.zero_grad(set_to_none=True)
         pred, token = model.forwardReconstruction(x, channel_idx)
         loss = torch.nn.functional.smooth_l1_loss(pred, token)
         loss.backward()
         opt.step()
-        if step % 50 != 0 and step != args.step - 1: continue
+        if s % 50 != 0 and s != step - 1: continue
         print(" | ".join([
-            f"step={step:04d}", 
+            f"step={s:04d}", 
             f"loss={float(loss):.6f}",
             f"#masked={int(len(token))}",
         ]))

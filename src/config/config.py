@@ -10,23 +10,20 @@ class Config():
         self.runner: ConfigRunner = ConfigRunner()
         self.trainer: ConfigTrainer = ConfigTrainer()
 
-    def eval(self):
-        self.data.y_as_y = True
+    def eval(self) -> "Config":
         self.data.filter_level = "All"
-        # PyTorch uses the spawn start method on macOS/Windows
-        # if a script creates a DataLoader with num_workers > 0 outside
-        # an if __name__ == "__main__": guard, each worker will re-import the
-        # main script and recursively launch new workers, causing a crash
-        self.data.num_workers = 0
         # we already close perturb and augment when using test_dataloader
         # close them again as a backup
         self.data.channel_perm = False
         self.data.channel_drop = 0
         self.data.channel_shift = 0
-        # freeze model parameters except adapter
-        self.runner.freeze_embedding = True
-        self.runner.freeze_transformer = 4  # freeze all layers
-        self.runner.freeze_head = True
+        # PyTorch uses the spawn start method on macOS/Windows
+        # if a script creates a DataLoader with num_workers > 0 outside
+        # an if __name__ == "__main__": guard, each worker will re-import the
+        # main script and recursively launch new workers, causing a crash
+        self.data.num_workers = 0
+        # self.runner and self.trainer will not be used in eval mode
+        return self
 
 
 @dataclasses.dataclass(slots=True)
@@ -75,17 +72,21 @@ class ConfigRunner():
     freeze_embedding: bool = False
     freeze_transformer: int = 0
     freeze_head: bool = False   # exclude adapter
-    # loss
+    # Pretrain loss
     enable: tuple[bool, bool, bool] = (False, True, False)
     weight: tuple[float, float, float] = (0.0, 1.0, 0.0)
-    # contrastive
+    # Pretrain loss: contrastive
     T: float = 0.2
-    # reconstruction
+    # Pretrain loss: reconstruction
     p_point: float = 0.2
     p_span_small: tuple[float, float] = (0.0, 0.5)  # channel = 1
     p_span_large: tuple[float, float] = (0.0, 1.0)  # channel > 1
     p_hide: float = 0.9
     p_keep: float = 0.1
+    # Finetune loss
+    weight_shape: float = 0.2
+    weight_min: float = 0.4
+    weight_max: float = 0.4
     # optimizer
     lr: float = 0.005
     step_size: int = 30

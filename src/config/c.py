@@ -1,7 +1,7 @@
 from .config import Config
 
 
-class ConfigCp(Config):
+class Cp(Config):
     def __init__(self):
         super().__init__()
         self.data.y_as_y = False
@@ -13,7 +13,7 @@ class ConfigCp(Config):
         self.runner.weight = (  0.0,  1.0,   0.0)
 
 
-class ConfigCf(Config):
+class Cf(Config):
     def __init__(self):
         super().__init__()
         self.data.y_as_y = True
@@ -38,7 +38,7 @@ Now, we perform ablation studies on stride.
 # S=100, stride=75
 
 
-class ConfigC01(ConfigCp):
+class C01(Cp):
     def __init__(self):
         super().__init__()
         self.model.S = 100
@@ -46,7 +46,7 @@ class ConfigC01(ConfigCp):
         self.runner.step_size = 20
 
 
-class ConfigC02(ConfigCp):
+class C02(Cp):
     def __init__(self):
         super().__init__()
         self.model.S = 100
@@ -54,176 +54,176 @@ class ConfigC02(ConfigCp):
         self.runner.lr = 0.0001
         self.runner.step_size = 50
         self.trainer.max_epochs = 5700
-        self.trainer.ckpt_load_path = "ckpt/ConfigC01/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C01/last.ckpt"
 
 
-class ConfigC03(ConfigCf):
+class C03(Cf):
     def __init__(self):
         super().__init__()
         self.model.S = 100
         self.model.stride = 75
         self.runner.freeze_transformer = 4
         self.trainer.max_epochs = 7000
-        self.trainer.ckpt_load_path = "ckpt/ConfigC02/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C02/last.ckpt"
 
 
-class ConfigC04(ConfigCf):
+class C04(Cf):
     def __init__(self):
         super().__init__()
         self.model.S = 100
         self.model.stride = 75
         self.trainer.max_epochs = 7000
-        self.trainer.ckpt_load_path = "ckpt/ConfigC02/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C02/last.ckpt"
 
 
 # S=100, stride=50
 
 
-class ConfigC05(ConfigCp):
+class C05(Cp):
     def __init__(self):
         super().__init__()
         self.model.S = 100
         self.model.stride = 50
 
 
-class ConfigC06(ConfigCf):
+class C06(Cf):
     def __init__(self):
         super().__init__()
         self.model.S = 100
         self.model.stride = 50
         self.runner.freeze_transformer = 4
         self.trainer.max_epochs = 7000
-        self.trainer.ckpt_load_path = "ckpt/ConfigC05/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C05/last.ckpt"
 
 
-class ConfigC07(ConfigCf):
+class C07(Cf):
     def __init__(self):
         super().__init__()
         self.model.S = 100
         self.model.stride = 50
         self.trainer.max_epochs = 7125
-        self.trainer.ckpt_load_path = "ckpt/ConfigC05/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C05/last.ckpt"
 
 
 # S=100, stride=25 
 
 
-class ConfigC08(ConfigCp):
+class C08(Cp):
     def __init__(self):
         super().__init__()
         self.model.S = 100
         self.model.stride = 25
 
 
-class ConfigC09(ConfigCf):
+class C09(Cf):
     def __init__(self):
         super().__init__()
         self.model.S = 100
         self.model.stride = 25
         self.trainer.max_epochs = 5500
-        self.trainer.ckpt_load_path = "ckpt/ConfigC08/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C08/last.ckpt"
 
 
 """
 Best Valid MSE Reconstruction: (before smoothing, after 0.9 smoothing)
--   ConfigC02, S=100, stride=75: (0.0357, 0.0386)
--   ConfigC05, S=100, stride=50: (0.0297, 0.0322)
--   ConfigC08, S=100, stride=25: (0.0244, 0.0266)
+-   C02, S=100, stride=75: (0.0357, 0.0386)
+-   C05, S=100, stride=50: (0.0297, 0.0322)
+-   C08, S=100, stride=25: (0.0244, 0.0266)
 Best Valid MSE Regression: (before smoothing, after 0.9 smoothing)
--   ConfigC04, S=100, stride=75: (21.13, 22.19)
--   ConfigC07, S=100, stride=50: (18.89, 19.67)
--   ConfigC09, S=100, stride=25: (16.50, 18.07)
+-   C04, S=100, stride=75: (21.13, 22.19)
+-   C07, S=100, stride=50: (18.89, 19.67)
+-   C09, S=100, stride=25: (16.50, 18.07)
 """
 
 
 # S=200, stride=50
 
 
-class ConfigC10(ConfigCp):
+class C10(Cp):
     def __init__(self):
         super().__init__()
         self.model.S = 200
         self.model.stride = 50
 
 
-class ConfigC11(ConfigCf):
+class C11(Cf):
     def __init__(self):
         super().__init__()
         self.model.S = 200
         self.model.stride = 50
-        self.trainer.ckpt_load_path = "ckpt/ConfigC10/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C10/last.ckpt"
 
 
 # S=200, stride=100
 
 
-class ConfigC12(ConfigCp):
+class C12(Cp):
     def __init__(self):
         super().__init__()
         self.model.S = 200
         self.model.stride = 100
 
 
-class ConfigC13(ConfigCf):
+class C13(Cf):
     def __init__(self):
         super().__init__()
         self.model.S = 200
         self.model.stride = 100
-        self.trainer.ckpt_load_path = "ckpt/ConfigC12/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C12/last.ckpt"
 
 
 # S=400, stride=50
 
 
-class ConfigC14(ConfigCp):
+class C14(Cp):
     def __init__(self):
         super().__init__()
         self.model.S = 400
         self.model.stride = 50
 
 
-class ConfigC15(ConfigCf):
+class C15(Cf):
     def __init__(self):
         super().__init__()
         self.model.S = 400
         self.model.stride = 50
-        self.trainer.ckpt_load_path = "ckpt/ConfigC14/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C14/last.ckpt"
 
 
 # S=400, stride=100
 
 
-class ConfigC16(ConfigCp):
+class C16(Cp):
     def __init__(self):
         super().__init__()
         self.model.S = 400
         self.model.stride = 100
 
 
-class ConfigC17(ConfigCf):
+class C17(Cf):
     def __init__(self):
         super().__init__()
         self.model.S = 400
         self.model.stride = 100
-        self.trainer.ckpt_load_path = "ckpt/ConfigC16/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C16/last.ckpt"
 
 
 # S=400, stride=200
 
 
-class ConfigC18(ConfigCp):
+class C18(Cp):
     def __init__(self):
         super().__init__()
         self.model.S = 400
         self.model.stride = 200
 
 
-class ConfigC19(ConfigCf):
+class C19(Cf):
     def __init__(self):
         super().__init__()
         self.model.S = 400
         self.model.stride = 200
-        self.trainer.ckpt_load_path = "ckpt/ConfigC18/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C18/last.ckpt"
 
 
 """
@@ -232,7 +232,7 @@ where train and valid's subject are joint.
 """
 
 
-class ConfigC20(ConfigCp):
+class C20(Cp):
     def __init__(self):
         super().__init__()
         self.data.split_type = "SubjectIndependent"
@@ -240,13 +240,13 @@ class ConfigC20(ConfigCp):
         self.model.stride = 25
 
 
-class ConfigC21(ConfigCf):
+class C21(Cf):
     def __init__(self):
         super().__init__()
         self.data.split_type = "SubjectIndependent"
         self.model.S = 100
         self.model.stride = 25
-        self.trainer.ckpt_load_path = "ckpt/ConfigC20/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C20/last.ckpt"
 
 
 """
@@ -255,10 +255,10 @@ subjects?
 """
 
 
-class ConfigC22(ConfigCf):
+class C22(Cf):
     def __init__(self):
         super().__init__()
         self.data.split_type = "SubjectIndependent"
         self.model.S = 100
         self.model.stride = 25
-        self.trainer.ckpt_load_path = "ckpt/ConfigC08/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/C08/last.ckpt"
