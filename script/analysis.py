@@ -1,15 +1,13 @@
-config_name = "PretrainH"
-epoch = None
+config_name, subject, epoch = "Finetune", "S001", 1399
 
 
-# %% # import
+# %% # setup
 """ setup """
 
 import torch
 import lightning
 import numpy as np
 import pandas as pd
-import scipy.stats
 
 import os
 import tqdm
@@ -25,13 +23,20 @@ lightning.seed_everything(42, workers=True, verbose=False)
 warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
 
 # help function to get a ckpt_load_path
-def ckptFinder(config: src.config.Config, epoch: int | None = None) -> str:
-    root = config.trainer.ckpt_save_fold
-    name = config.__class__.__name__
+def ckptFinder(
+    config: src.config.Config, 
+    subject: str | None = None,
+    epoch: int | None = None
+) -> str:
+    ckpt_load_path = os.path.join(
+        config.trainer.ckpt_save_fold, config.__class__.__name__
+    )
+    if subject is not None:
+        ckpt_load_path = os.path.join(ckpt_load_path, subject)
     target = "last" if epoch is None else f"epoch={epoch:04d}"
-    for f in os.listdir(os.path.join(root, name)):
+    for f in os.listdir(ckpt_load_path):
         if target in f and f.endswith(".ckpt"):
-            return os.path.join(root, name, f)
+            return os.path.join(ckpt_load_path, f)
     raise FileNotFoundError
 
 # device
@@ -40,7 +45,9 @@ elif torch.backends.mps.is_available(): device = "mps"
 else: device = "cpu"
 # config
 config: src.config.Config = getattr(src.config, config_name)().eval()
-config.trainer.ckpt_load_path = ckptFinder(config, epoch=epoch)
+config.trainer.ckpt_load_path = ckptFinder(
+    config, subject=subject, epoch=epoch
+)
 print(f"load ckpt from {config.trainer.ckpt_load_path}")
 
 result_fold = f"data/{config.__class__.__name__}/"
@@ -74,7 +81,7 @@ for batch in tqdm.tqdm(dm.test_dataloader()):
     x, channel_idx, y = x.to(device), channel_idx.to(device), y.to(device)
     # forward
     with torch.no_grad(): x_pred = model.forwardRegression(
-        x, channel_idx
+        x, channel_idx, adapter=True
     )
     # store result
     result_b.append(torch.cat([
@@ -115,169 +122,30 @@ print(f"result: torch.Tensor > {result_path}\t\t{tuple(result.shape)}")
 result = torch.load(result_path, weights_only=True)
 profile = pd.read_csv(profile_path)
 
-
-# %% # calibration
-""" calibration """
-
-# calibration 0: no calibration
-print("calibration 0")
-for s in ["train", "test"]: print(
-    s, "\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
-        np.nanmean(np.abs(
-            profile[
-                (profile["split"] == s) & (profile["condition"] != 1)
-            ]["(P-T)MinBP"]
-        )),
-        np.nanmean(np.abs(
-            profile[
-                (profile["split"] == s) & (profile["condition"] != 1)
-            ]["(P-T)MaxBP"]
-        )),
-    )
-)
-
-# calibration 1: a and b per subject and min/max
-profile["Cal1PredMinBP"]  = np.nan
-profile["Cal1PredMaxBP"]  = np.nan
-profile["(Cal1P-T)MinBP"] = np.nan
-profile["(Cal1P-T)MaxBP"] = np.nan
-for subject, group in profile.groupby("subject"):
-    # calibration subset: condition == 1
-    cond1 = group[group["condition"] == 1]
-    # fit linear models if enough calibration points
-    if len(cond1) < 2:
-        # Not enough calibration points: no correction
-        a_min, b_min = 0.0, 0.0   # error ≈ 0 → P_adj = P
-        a_max, b_max = 0.0, 0.0
-    else:
-        # Min BP: fit PredMinBP -> (P-T)MinBP
-        a_min, b_min, r_value, p_value, std_err = scipy.stats.linregress(
-            cond1["PredMinBP"], cond1["(P-T)MinBP"]
-        )
-        # Max BP: fit PredMaxBP -> (P-T)MaxBP
-        a_max, b_max, r_value, p_value, std_err = scipy.stats.linregress(
-            cond1["PredMaxBP"], cond1["(P-T)MaxBP"]
-        )
-    # indices of this subject in the original DataFrame
-    idx = group.index
-    # Apply this subject's correction to all its rows
-    pred_min = profile.loc[idx, "PredMinBP"]
-    pred_max = profile.loc[idx, "PredMaxBP"]
-    true_min = profile.loc[idx, "TrueMinBP"]
-    true_max = profile.loc[idx, "TrueMaxBP"]
-    # Predicted error from linear model
-    err_hat_min = a_min * pred_min + b_min  # type: ignore
-    err_hat_max = a_max * pred_max + b_max  # type: ignore
-    # Corrected predictions: P_adj = P - (aP + b)
-    adj_pred_min = pred_min - err_hat_min
-    adj_pred_max = pred_max - err_hat_max
-    # stre
-    profile.loc[idx, "Cal1PredMinBP"]  = adj_pred_min
-    profile.loc[idx, "Cal1PredMaxBP"]  = adj_pred_max
-    profile.loc[idx, "(Cal1P-T)MinBP"] = adj_pred_min - true_min
-    profile.loc[idx, "(Cal1P-T)MaxBP"] = adj_pred_max - true_max
-print("calibration 1")
-for s in ["train", "test"]: print(
-    s, "\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
-        np.nanmean(np.abs(
-            profile[
-                (profile["split"] == s) & (profile["condition"] != 1)
-            ]["(Cal1P-T)MinBP"]
-        )),
-        np.nanmean(np.abs(
-            profile[
-                (profile["split"] == s) & (profile["condition"] != 1)
-            ]["(Cal1P-T)MaxBP"]
-        )),
-    )
-)
-
-# calibration 2: a per split and min/max, b per subject and min/max
-# 2.0 prepare columns for second calibration
-profile["Cal2PredMinBP"]  = np.nan
-profile["Cal2PredMaxBP"]  = np.nan
-profile["(Cal2P-T)MinBP"] = np.nan
-profile["(Cal2P-T)MaxBP"] = np.nan
-# 2.1 compute global slopes for each split (train / test)
-global_slopes = {}  # keys: (split, "min") / (split, "max")
-for split_name in ["train", "test"]:
-    df_split = profile[
-        (profile["split"] == split_name) & (profile["condition"] == 1)
-    ]
-    # Min BP: PredMinBP -> (P-T)MinBP
-    if df_split["PredMinBP"].notna().sum() >= 2:
-        a_min, b_min, r, p, se = scipy.stats.linregress(
-            df_split["PredMinBP"], df_split["(P-T)MinBP"]
-        )
-    else:
-        a_min = 0.0  # no slope info; treat as pure bias
-    global_slopes[(split_name, "min")] = a_min
-    # Max BP: PredMaxBP -> (P-T)MaxBP
-    if df_split["PredMaxBP"].notna().sum() >= 2:
-        a_max, b_max, r, p, se = scipy.stats.linregress(
-            df_split["PredMaxBP"], df_split["(P-T)MaxBP"]
-        )
-    else:
-        a_max = 0.0
-    global_slopes[(split_name, "max")] = a_max
-# 2.2 per-subject bias estimation using fixed global slope
-for subject, group in profile.groupby("subject"):
-    # process each split separately, because slope depends on split
-    for split_name in ["train", "test"]:
-        sub = group[group["split"] == split_name]
-        if sub.empty: continue  # this subject has no samples in this split
-        # use global slopes
-        a_min = global_slopes[(split_name, "min")]
-        a_max = global_slopes[(split_name, "max")]
-        # we use condition == 1 samples from this subject for bias estimation
-        calib = sub[sub["condition"] == 1]
-        # MinBP: bias b_min_subject
-        if calib["PredMinBP"].notna().sum() >= 1:
-            # (P-T)_i ≈ a_global * Pred_i + b_subject
-            # => b_subject = mean((P-T)_i - a_global * Pred_i)
-            b_min = np.nanmean(
-                calib["(P-T)MinBP"] - a_min * calib["PredMinBP"]
-            )
-        else:
-            b_min = 0.0  # no info, fallback to 0
-        # MaxBP: bias b_max_subject
-        if calib["PredMaxBP"].notna().sum() >= 1:
-            b_max = np.nanmean(
-                calib["(P-T)MaxBP"] - a_max * calib["PredMaxBP"]
-            )
-        else:
-            b_max = 0.0
-        # apply calibration to all rows of this subject & split
-        idx = sub.index
-        pred_min = profile.loc[idx, "PredMinBP"]
-        pred_max = profile.loc[idx, "PredMaxBP"]
-        true_min = profile.loc[idx, "TrueMinBP"]
-        true_max = profile.loc[idx, "TrueMaxBP"]
-        # predicted error from fixed-slope + subject-specific bias
-        err_hat_min = a_min * pred_min + b_min
-        err_hat_max = a_max * pred_max + b_max
-        adj_pred_min = pred_min - err_hat_min
-        adj_pred_max = pred_max - err_hat_max
-        profile.loc[idx, "Cal2PredMinBP"]  = adj_pred_min
-        profile.loc[idx, "Cal2PredMaxBP"]  = adj_pred_max
-        profile.loc[idx, "(Cal2P-T)MinBP"] = adj_pred_min - true_min
-        profile.loc[idx, "(Cal2P-T)MaxBP"] = adj_pred_max - true_max
-# 2.3 print
-print("calibration 2")
-for s in ["train", "test"]: print(
-    s, "\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
-        np.nanmean(np.abs(
-            profile[
-                (profile["split"] == s) & (profile["condition"] != 1)
-            ]["(Cal2P-T)MinBP"]
-        )),
-        np.nanmean(np.abs(
-            profile[
-                (profile["split"] == s) & (profile["condition"] != 1)
-            ]["(Cal2P-T)MaxBP"]
-        )),
-    )
-)
+print("train", "\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
+    np.nanmean(np.abs(
+        profile[
+            (profile["subject"] == subject) & (profile["condition"] == 1)
+        ]["(P-T)MinBP"]
+    )),
+    np.nanmean(np.abs(
+        profile[
+            (profile["subject"] == subject) & (profile["condition"] == 1)
+        ]["(P-T)MaxBP"]
+    )),
+))
+print("valid", "\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
+    np.nanmean(np.abs(
+        profile[
+            (profile["subject"] == subject) & (profile["condition"] != 1)
+        ]["(P-T)MinBP"]
+    )),
+    np.nanmean(np.abs(
+        profile[
+            (profile["subject"] == subject) & (profile["condition"] != 1)
+        ]["(P-T)MaxBP"]
+    )),
+))
 
 
 # %% # visualization

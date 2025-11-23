@@ -22,8 +22,9 @@ warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
 def main() -> None:
     args = getArgs()
     for config_name in args.config_name: 
-        print(f"{'=' * 20}[{config_name}]{'=' * 20}")
-        train(config_name)
+        for subject in args.subject:
+            print(f"{'=' * 20}[{config_name}:{subject}]{'=' * 20}")
+            train(config_name, subject)
 
 
 def getArgs() -> argparse.Namespace:
@@ -37,15 +38,21 @@ def getArgs() -> argparse.Namespace:
             and obj is not src.config.Config
         ],
     )
+    parser.add_argument(
+        "--subject", "-S", type=str, nargs="+", required=True,
+        dest="subject"
+    )
     args = parser.parse_args()
     return args
 
 
-def train(config_name: str) -> None:
+def train(config_name: str, subject: str) -> None:
     # config
     config: src.config.Config = getattr(src.config, config_name)()
     # data
-    data = src.data.Pretrain(**dataclasses.asdict(config.data))
+    data = src.data.Finetune(
+        subject=subject, **dataclasses.asdict(config.data)
+    )
     # model
     model = src.model.SCOST(**dataclasses.asdict(config.model))
     if not config.trainer.resume and \
@@ -60,15 +67,19 @@ def train(config_name: str) -> None:
         }
         model.load_state_dict(state_dict, strict=False)
     # runner
-    runner = src.runner.Pretrain(
+    runner = src.runner.Finetune(
         model=model, **dataclasses.asdict(config.runner)    # type: ignore
     )
     # trainer
     logger = lightning.pytorch.loggers.TensorBoardLogger(
-        save_dir=config.trainer.log_save_fold, name=config_name, version="",
+        save_dir=config.trainer.log_save_fold, 
+        name=os.path.join(config_name, subject),
+        version="",
     )
     checkpoint = lightning.pytorch.callbacks.ModelCheckpoint(
-        dirpath=os.path.join(config.trainer.ckpt_save_fold, config_name),
+        dirpath=os.path.join(
+            config.trainer.ckpt_save_fold, config_name, subject
+        ),
         every_n_epochs=config.trainer.every_n_epochs,
         filename="{epoch:04d}",
         save_top_k=-1,

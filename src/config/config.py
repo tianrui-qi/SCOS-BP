@@ -84,6 +84,7 @@ class ConfigRunner():
     p_hide: float = 0.9
     p_keep: float = 0.1
     # Finetune loss
+    K: int = 50
     weight_shape: float = 0.2
     weight_min: float = 0.4
     weight_max: float = 0.4
