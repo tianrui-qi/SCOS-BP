@@ -2,6 +2,7 @@ import torch
 import lightning
 
 import argparse
+import warnings
 import dataclasses
 import matplotlib.pyplot as plt
 
@@ -10,6 +11,9 @@ import src
 
 torch.set_float32_matmul_precision("medium")
 lightning.seed_everything(42, workers=True, verbose=False)
+# disable MPS UserWarning: The operator 'aten::col2im' is not currently 
+# supported on the MPS backend
+warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
 
 
 def main():
@@ -19,13 +23,15 @@ def main():
     # config
     config = src.config.Config()
     config.eval()   # turn off all augmentations
+    config.data.batch_size = 32
+    # device
     if torch.cuda.is_available(): device = "cuda"
     elif torch.backends.mps.is_available(): device = "mps"
     else: device = "cpu"
     # data, fixed at first batch
-    dm = src.data.DataModuleRaw(**dataclasses.asdict(config.data))
+    dm = src.data.Module(**dataclasses.asdict(config.data))
     dm.setup()
-    x, channel_idx = next(iter(dm.train_dataloader()))
+    x, channel_idx, _ = next(iter(dm.train_dataloader()))
     x, channel_idx = x.to(device), channel_idx.to(device)
     # model
     model = src.model.SCOST(**dataclasses.asdict(config.model)).to(device)
@@ -34,7 +40,7 @@ def main():
     opt = torch.optim.Adam(model.parameters(), lr=config.runner.lr)
     for step in range(args.step):
         opt.zero_grad(set_to_none=True)
-        pred, token = model.forwardReconstructionRaw(x, channel_idx)
+        pred, token = model.forwardReconstruction(x, channel_idx)
         loss = torch.nn.functional.smooth_l1_loss(pred, token)
         loss.backward()
         opt.step()
@@ -47,7 +53,7 @@ def main():
     # eval
     model.eval()
     with torch.no_grad():
-        x, y = model.forwardReconstructionRaw(x, channel_idx, user_mask=3)
+        x, y = model.forwardReconstruction(x, channel_idx, user_mask=3)
     plt.subplot(3, 1, 1)
     plt.plot(x[0, 0].cpu())
     plt.plot(y[0, 0].cpu())

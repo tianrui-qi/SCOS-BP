@@ -1,54 +1,19 @@
 import torch
 
-from .data import DataModule
 
-
-class DataModuleReg(DataModule):
+class Set(torch.utils.data.Dataset):
     def __init__(
         self, 
-        channel_perm: bool = False, 
-        channel_drop: float = 0, 
-        channel_shift: float = 0,
-        **kwargs
-    ) -> None:
-        super().__init__(**kwargs)
-        self.channel_perm = channel_perm
-        self.channel_drop = channel_drop
-        self.channel_shift = channel_shift
-
-    def setup(self, stage: str | None = None) -> None:
-        super().setup(stage)
-        # dataset
-        self.train_dataset = DatasetReg(
-            self.x[(self.profile["split"] == 0).to_numpy()], 
-            self.y[(self.profile["split"] == 0).to_numpy()],
-            channel_perm=self.channel_perm, 
-            channel_drop=self.channel_drop,
-            channel_shift=self.channel_shift,
-        )
-        self.val_dataset   = DatasetReg(
-            self.x[(self.profile["split"] == 1).to_numpy()], 
-            self.y[(self.profile["split"] == 1).to_numpy()]
-        )
-        self.test_dataset  = DatasetReg(
-            self.x, 
-            self.y,
-        )
-
-
-class DatasetReg(torch.utils.data.Dataset):
-    def __init__(
-        self, 
-        x: torch.Tensor,    # (N, C, T)
-        y: torch.Tensor,    # (N, ...)
+        x: torch.Tensor,                # (N, C, T)
+        y: torch.Tensor | None = None,  # (N, ...) or None
         # augment
         channel_perm: bool = False, 
         channel_drop: float = 0, 
         channel_shift: float = 0,
     ) -> None:
         # data
-        self.x = x          # (N, C, T)
-        self.y = y          # (N, ...)
+        self.x = x  # (N, C, T)
+        self.y = y  # (N, ...) or None
         # augment
         self.channel_perm = channel_perm
         self.channel_drop = channel_drop
@@ -57,7 +22,9 @@ class DatasetReg(torch.utils.data.Dataset):
     def __len__(self) -> int:
         return len(self.x)
 
-    def __getitem__(self, i: int) -> tuple[torch.Tensor, ...]:
+    def __getitem__(self, i: int) -> tuple[
+        torch.Tensor, torch.Tensor, torch.Tensor | None
+    ]:
         # x
         x = self.x[i].clone()   # (C, T)
         x_channel_idx = (       # (C,)
@@ -65,14 +32,14 @@ class DatasetReg(torch.utils.data.Dataset):
         )
         x_channel_idx[torch.all(torch.isnan(x), dim=-1)] = -1
         # augment x
-        x, x_channel_idx = DatasetReg.augment(
+        x, x_channel_idx = Set.augment(
             x, x_channel_idx, 
             channel_perm=self.channel_perm, 
             channel_drop=self.channel_drop, 
             channel_shift=self.channel_shift
         )
         # y
-        y = self.y[i].clone()
+        y = self.y[i].clone() if self.y is not None else None
         # return
         return x, x_channel_idx, y
 

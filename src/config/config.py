@@ -11,6 +11,7 @@ class Config():
         self.trainer: ConfigTrainer = ConfigTrainer()
 
     def eval(self):
+        self.data.y_as_y = True
         self.data.filter_level = "All"
         # PyTorch uses the spawn start method on macOS/Windows
         # if a script creates a DataLoader with num_workers > 0 outside
@@ -19,8 +20,6 @@ class Config():
         self.data.num_workers = 0
         # we already close perturb and augment when using test_dataloader
         # close them again as a backup
-        self.data.a_range = None
-        self.data.b_range = None
         self.data.channel_perm = False
         self.data.channel_drop = 0
         self.data.channel_shift = 0
@@ -32,10 +31,10 @@ class Config():
 
 @dataclasses.dataclass(slots=True)
 class ConfigData():
-    enable: tuple[bool, ...] = (True, False, True, False)
     # data
     data_load_path: str = "data/wave2wave.mat"
-    y_as_channel: bool = True
+    y_as_y: bool = True
+    y_as_x: bool = False
     # normalize
     mu: float | None = 115.0    # set to None if want per-subject mu
     sd: float | None = 20.0     # set to None if want per-subject sd
@@ -45,26 +44,22 @@ class ConfigData():
     ] | None = "SubjectIndependent"
     split_ratio: tuple[float, float, float] = (0.5, 0.2, 0.3)
     # filter
-    filter_level: Literal["X", "Y", "XY", "All"] | None = None
-    # dataloader
-    batch_size: int = 256
-    num_workers: int = 8
-    # perturb
-    P: int = 32
-    a_range: tuple[float, float] | float | None = (0.5, 1.5)
-    b_range: tuple[float, float] | float | None = (-2.0, 2.0)
-    # augment
+    filter_level: Literal["X|Y", "X", "Y", "X&Y", "All"] | None = "X|Y"
+    # dataset
     channel_perm: bool = True
     channel_drop: float = 1     # probability of enable channel drop
     channel_shift: float = 0
+    # dataloader
+    batch_size: int = 256
+    num_workers: int = 8
 
 
 @dataclasses.dataclass(slots=True)
 class ConfigModel():
     D: int = 256
     # tokenizer
-    S: int = 40
-    stride: int = 20
+    S: int = 100
+    stride: int = 25
     # embedding
     C_max: int = 8
     L_max: int = 1024
@@ -81,8 +76,8 @@ class ConfigRunner():
     freeze_transformer: int = 0
     freeze_head: bool = False   # exclude adapter
     # loss
-    enable: tuple[bool, ...] = (True, False, True, False)
-    weight: tuple[float, ...] = (0.2, 0.0, 0.8, 0.0)
+    enable: tuple[bool, bool, bool] = (False, True, False)
+    weight: tuple[float, float, float] = (0.0, 1.0, 0.0)
     # contrastive
     T: float = 0.2
     # reconstruction

@@ -4,19 +4,27 @@ from .config import Config
 class ConfigCp(Config):
     def __init__(self):
         super().__init__()
-        self.data.enable = (False, False, True, False)
+        self.data.y_as_y = False
+        self.data.y_as_x = False
         self.data.data_load_path = "data/wave2value.mat"
         self.data.split_type = "SubjectDependent"
+        # [Contrastive, Reconstruction, Regression]
+        self.runner.enable = (False, True, False)
+        self.runner.weight = (  0.0,  1.0,   0.0)
 
 
 class ConfigCf(Config):
     def __init__(self):
         super().__init__()
-        self.data.enable = (False, False, False, True)
+        self.data.y_as_y = True
+        self.data.y_as_x = False
         self.data.data_load_path = "data/wave2value.mat"
         self.data.split_type = "SubjectDependent"
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
+        # [Contrastive, Reconstruction, Regression]
+        self.runner.enable = (False, False, True)
+        self.runner.weight = (  0.0,   0.0,  1.0)
 
 
 """

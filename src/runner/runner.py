@@ -9,7 +9,7 @@ class Runner(lightning.LightningModule):
         self, 
         model: SCOST, 
         freeze_embedding: bool, freeze_transformer: int, freeze_head: bool,
-        enable: tuple[bool, ...], weight: tuple[float, ...], 
+        enable: tuple[bool, bool, bool], weight: tuple[float, float, float], 
         T: float = 0.2,
         p_point: float = 0.2, 
         p_span_small: tuple[float, float] = (0.0, 0.5),
@@ -27,8 +27,7 @@ class Runner(lightning.LightningModule):
         ))
         self.task = [f for f, e in zip([
             self._stepContrastive,
-            self._stepReconstructionCal,
-            self._stepReconstructionRaw,
+            self._stepReconstruction,
             self._stepRegression,
         ], enable) if e]
         # contrastive 
@@ -51,7 +50,7 @@ class Runner(lightning.LightningModule):
         return self._step(batch, stage='valid')
 
     def _step(self, batch, stage):
-        loss = [f(b, stage) for f, b in zip(self.task, batch)]
+        loss = [f(batch, stage) for f in self.task]
         loss = torch.stack([
             l.detach() if w == 0 else l 
             for l, w in zip(loss, self.weight)
@@ -65,7 +64,7 @@ class Runner(lightning.LightningModule):
         return loss
 
     def _stepContrastive(self, batch, stage):
-        x, x_channel_idx = batch
+        x, x_channel_idx, _ = batch
         x_pred = (      # (B, D)
             self.model.forwardContrastive(x, x_channel_idx)
         )
@@ -87,53 +86,10 @@ class Runner(lightning.LightningModule):
         )
         return loss
 
-    def _stepReconstructionCal(self, batch, stage):
-        x, x_channel_idx, c, c_channel_idx, y = batch
-        if stage == "train":
-            x, y = (    # (#mask, S), (#mask, S)
-                self.model.forwardReconstructionCal(
-                    x, x_channel_idx, c, c_channel_idx, y,
-                    p_point=self.p_point,
-                    p_span_small=self.p_span_small,
-                    p_span_large=self.p_span_large,
-                    p_hide=self.p_hide,
-                    p_keep=self.p_keep,
-                )
-            )
-            loss = torch.nn.functional.smooth_l1_loss(x, y)
-        else:
-            x, y = (    # (B, C, T), (B, C, T)
-                self.model.forwardReconstructionCal(
-                    x, x_channel_idx, c, c_channel_idx, y,
-                    user_mask=3,
-                )
-            )
-            true_min = y[:, 3, :].min(dim=-1).values
-            true_max = y[:, 3, :].max(dim=-1).values
-            pred_min = x[:, 3, :].min(dim=-1).values
-            pred_max = x[:, 3, :].max(dim=-1).values
-            mask = ~(
-                torch.isnan(true_min) | torch.isnan(true_max) | 
-                torch.isnan(pred_min) | torch.isnan(pred_max)
-            )
-            true_min = true_min[mask]
-            true_max = true_max[mask]
-            pred_min = pred_min[mask]
-            pred_max = pred_max[mask]
-            loss = (
-                torch.nn.functional.l1_loss(pred_min, true_min) +
-                torch.nn.functional.l1_loss(pred_max, true_max)
-            ) * 0.5 if mask.sum() > 0 else x.new_tensor(0.0)
-        self.log(
-            f"loss/reconstruction/{stage}", loss, 
-            on_step=False, on_epoch=True, logger=True
-        )
-        return loss
-
-    def _stepReconstructionRaw(self, batch, stage):
-        x, x_channel_idx = batch
+    def _stepReconstruction(self, batch, stage):
+        x, x_channel_idx, _ = batch
         x, y = (    # (#mask, S), (#mask, S)
-            self.model.forwardReconstructionRaw(
+            self.model.forwardReconstruction(
                 x, x_channel_idx,
                 p_point=self.p_point,
                 p_span_small=self.p_span_small,
