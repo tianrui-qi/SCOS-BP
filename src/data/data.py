@@ -6,15 +6,13 @@ import pandas as pd
 import scipy.io
 from typing import Literal, Final
 
-from .set import Set
 
-
-class Module(lightning.LightningDataModule):
+class DataModule(lightning.LightningDataModule):
     def __init__(
         self,
         # data
         data_load_path: str, 
-        y_as_y: bool = False, 
+        y_as_y: bool = True, 
         y_as_x: bool = False,
         # normalize
         mu: float | None = 115.0, 
@@ -26,12 +24,6 @@ class Module(lightning.LightningDataModule):
         split_ratio: tuple[float, float, float] = (0.5, 0.2, 0.3),
         # filter
         filter_level: Literal["X|Y", "X", "Y", "X&Y", "All"] | None = None,
-        # dataset
-        channel_perm: bool = False, 
-        channel_drop: float = 0, 
-        channel_shift: float = 0,
-        # dataloader
-        batch_size: int = 1, num_workers: int = 0,
         **kwargs
     ) -> None:
         super().__init__()
@@ -62,16 +54,6 @@ class Module(lightning.LightningDataModule):
         # filter
         self.filter_level: Literal["X|Y", "X", "Y", "X&Y", "All"] | None
 
-        # dataset
-        self.channel_perm = channel_perm
-        self.channel_drop = channel_drop
-        self.channel_shift = channel_shift
-        # dataloader
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-        self.pin_memory = torch.cuda.is_available()
-        self.persistent_workers = self.num_workers > 0
-
     def setup(self, stage: str | None = None) -> None:
         # load
         self.load_(self._data_load_path, self._y_as_y, self._y_as_x)
@@ -89,7 +71,7 @@ class Module(lightning.LightningDataModule):
         self.filter_(self._filter_level)
 
     def load_(
-        self, data_load_path: str, y_as_y: bool = False, y_as_x: bool = False
+        self, data_load_path: str, y_as_y: bool = True, y_as_x: bool = False
     ) -> None:
         # load .mat
         data = scipy.io.loadmat(data_load_path)["data_store"][0, 0]
@@ -489,85 +471,101 @@ class Module(lightning.LightningDataModule):
         #   subclasses may extend this method to apply additional filtering 
         #   criteria
 
-    def train_dataloader(
-        self, subject: str | None = None
-    ) -> torch.utils.data.DataLoader:
-        if subject is None:
-            x = self.x[(
-                self.profile["split"] == 0
-            ).to_numpy()]
-            y = self.y[(
-                self.profile["split"] == 0
-            ).to_numpy()] if self.y_as_y else None
-        else:
-            x = self.x[(
-                (self.profile["subject"] == subject) &
-                (self.profile["condition"] == 1)
-            ).to_numpy()]
-            y = self.y[(
-                (self.profile["subject"] == subject) &
-                (self.profile["condition"] == 1)
-            ).to_numpy()] if self.y_as_y else None
-        dataset = Set(
-            x, y,
+
+class DataSet(torch.utils.data.Dataset):
+    def __init__(
+        self, 
+        x: torch.Tensor,                # (N, C, T)
+        y: torch.Tensor | None = None,  # (N, ...) or None
+        # augment
+        channel_perm: bool = False, 
+        channel_drop: float = 0, 
+        channel_shift: float = 0,
+    ) -> None:
+        # data
+        self.x = x  # (N, C, T)
+        self.y = y  # (N, ...) or None
+        # augment
+        self.channel_perm = channel_perm
+        self.channel_drop = channel_drop
+        self.channel_shift = channel_shift
+
+    def __len__(self) -> int:
+        return len(self.x)
+
+    def __getitem__(self, i: int) -> tuple[
+        torch.Tensor, torch.Tensor, torch.Tensor | None
+    ]:
+        # x
+        x = self.x[i].clone()   # (C, T)
+        x_channel_idx = (       # (C,)
+            torch.arange(len(x), device=x.device, dtype=torch.long)
+        )
+        x_channel_idx[torch.all(torch.isnan(x), dim=-1)] = -1
+        # augment x
+        x, x_channel_idx = DataSet.augment(
+            x, x_channel_idx, 
             channel_perm=self.channel_perm, 
-            channel_drop=self.channel_drop,
-            channel_shift=self.channel_shift,
+            channel_drop=self.channel_drop, 
+            channel_shift=self.channel_shift
         )
-        dataloader = torch.utils.data.DataLoader(
-            dataset, shuffle=True, 
-            batch_size=self.batch_size, num_workers=self.num_workers, 
-            pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers
-        )
-        return dataloader
+        # y
+        y = self.y[i].clone() if self.y is not None else None
+        # return
+        return x, x_channel_idx, y
 
-    def val_dataloader(
-        self, subject: str | None = None
-    ) -> torch.utils.data.DataLoader:
-        if subject is None:
-            x = self.x[(
-                self.profile["split"] == 1
-            ).to_numpy()]
-            y = self.y[(
-                self.profile["split"] == 1
-            ).to_numpy()] if self.y_as_y else None
-        else:
-            x = self.x[(
-                (self.profile["subject"] == subject) &
-                (self.profile["condition"] != 1)
-            ).to_numpy()]
-            y = self.y[(
-                (self.profile["subject"] == subject) &
-                (self.profile["condition"] != 1)
-            ).to_numpy()] if self.y_as_y else None
-        dataset = Set(x, y)
-        dataloader = torch.utils.data.DataLoader(
-            dataset, shuffle=False, 
-            batch_size=self.batch_size, num_workers=self.num_workers, 
-            pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers
-        )
-        return dataloader
+    @staticmethod
+    def augment(
+        x: torch.Tensor,                # (C, T)
+        x_channel_idx: torch.Tensor,    # (C,)
+        channel_perm: bool = False, 
+        channel_drop: float = 0, 
+        channel_shift: float = 0,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        C, T = x.shape
+        device = x.device
 
-    def test_dataloader(
-        self, subject: str | None = None
-    ) -> torch.utils.data.DataLoader:
-        if subject is None:
-            x = self.x
-            y = self.y if self.y_as_y else None
-        else:
-            x = self.x[(
-                (self.profile["subject"] == subject)
-            ).to_numpy()]
-            y = self.y[(
-                (self.profile["subject"] == subject)
-            ).to_numpy()] if self.y_as_y else None
-        dataset = Set(x, y)
-        dataloader = torch.utils.data.DataLoader(
-            dataset, shuffle=False, 
-            batch_size=self.batch_size, num_workers=self.num_workers, 
-            pin_memory=self.pin_memory,
-            persistent_workers=self.persistent_workers
-        )
-        return dataloader
+        # if channel_perm, randomly shuffle channels order
+        if channel_perm:
+            perm = torch.randperm(C, device=device)
+            x, x_channel_idx = x[perm], x_channel_idx[perm]
+
+        # if channel_drop, randomly drop some channels by setting channel
+        # index to -1 and setting corresponding x to nan; 
+        # keep at least one channel
+        if torch.rand(()) < channel_drop:
+            valid_mask = x_channel_idx != -1
+            valid_idx = torch.where(valid_mask)[0]
+            # randomly keep k number of channels
+            k = torch.randint(
+                1, len(valid_idx)+1, (1,), device=x.device
+            ).item()
+            perm = torch.randperm(len(valid_idx), device=x.device)
+            keep_idx = valid_idx[perm][:k]
+            # drop channels that valid but not keep
+            drop_mask = torch.zeros_like(x_channel_idx, dtype=torch.bool)
+            drop_mask[valid_idx] = True
+            drop_mask[keep_idx] = False
+            # update x and channel_idx
+            x[drop_mask] = float("nan")
+            x_channel_idx[drop_mask] = -1
+
+        # if channel_shift in (0, 1), shift all channels by random amount
+        # in [-channel_shift*T, channel_shift*T)
+        # if channel_shift >= 1, shift by random amount in 
+        # [-channel_shift, channel_shift]
+        # pad nan for the shifted positions
+        if channel_shift > 0:
+            if channel_shift < 1:
+                max_shift = int(T * channel_shift)
+            else:
+                max_shift = int(channel_shift)
+            s = torch.randint(
+                -max_shift, max_shift + 1, (1,), device=x.device
+            ).item()
+            nan = torch.full_like(x, float('nan'))
+            if s > 0: nan[..., s:] = x[..., :-s]
+            if s < 0: nan[..., :s] = x[..., -s:]
+            if s != 0: x = nan
+
+        return x, x_channel_idx

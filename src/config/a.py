@@ -1,7 +1,7 @@
 from .config import Config
 
 
-class ConfigA01(Config):
+class A01(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
@@ -17,7 +17,7 @@ class ConfigA01(Config):
         self.trainer.max_epochs = 2350
 
 
-class ConfigA02(Config):
+class A02(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
@@ -33,11 +33,11 @@ class ConfigA02(Config):
         self.runner.weight = ( 0.2,  0.8, 0.00001)
         self.runner.step_size = 20
         self.trainer.max_epochs = 2860
-        self.trainer.ckpt_load_path = "ckpt/ConfigA01/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/A01/last.ckpt"
         self.trainer.resume = True
 
 
-class ConfigA03(Config):
+class A03(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
@@ -53,5 +53,5 @@ class ConfigA03(Config):
         self.runner.weight = ( 0.4,  0.6, 0.0001)
         self.runner.step_size = 20
         self.trainer.max_epochs = 5000
-        self.trainer.ckpt_load_path = "ckpt/ConfigA02/last.ckpt"
+        self.trainer.ckpt_load_path = "ckpt/A02/last.ckpt"
         self.trainer.resume = True

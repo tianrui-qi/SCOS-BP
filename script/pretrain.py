@@ -6,6 +6,7 @@ import lightning.pytorch.callbacks
 import os
 import inspect
 import argparse
+import warnings
 import dataclasses
 
 import src
@@ -13,6 +14,9 @@ import src
 
 torch.set_float32_matmul_precision("medium")
 lightning.seed_everything(42, workers=True, verbose=False)
+# disable MPS UserWarning: The operator 'aten::col2im' is not currently 
+# supported on the MPS backend
+warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
 
 
 def main() -> None:
@@ -41,7 +45,7 @@ def train(config_name: str) -> None:
     # config
     config: src.config.Config = getattr(src.config, config_name)()
     # data
-    data = src.data.Module(**dataclasses.asdict(config.data))
+    data = src.data.Pretrain(**dataclasses.asdict(config.data))
     # model
     model = src.model.SCOST(**dataclasses.asdict(config.model))
     if not config.trainer.resume and \
@@ -57,7 +61,7 @@ def train(config_name: str) -> None:
         model.load_state_dict(state_dict, strict=False)
     model = torch.compile(model)
     # runner
-    runner = src.runner.Runner(
+    runner = src.runner.Pretrain(
         model=model, **dataclasses.asdict(config.runner)    # type: ignore
     )
     # trainer

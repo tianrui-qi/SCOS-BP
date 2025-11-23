@@ -1,3 +1,7 @@
-from .runner import Runner
+from .pretrain import Pretrain
+from .finetune import Finetune
 
-__all__ = ['Runner']
+__all__ = [
+    "Pretrain",
+    "Finetune",
+]
