@@ -11,6 +11,7 @@ class Finetune(lightning.LightningModule):
         model: SCOST, 
         freeze_embedding: bool, freeze_transformer: int, freeze_head: bool,
         # loss
+        K: int = 50,
         weight_shape: float = 0.2, 
         weight_min: float = 0.4, weight_max: float = 0.4,
         # optimizer
@@ -22,6 +23,7 @@ class Finetune(lightning.LightningModule):
         self.model = model
         self.model.freeze(freeze_embedding, freeze_transformer, freeze_head)
         # loss
+        self.K = K
         self.weight_shape = weight_shape
         self.weight_min = weight_min
         self.weight_max = weight_max
@@ -41,11 +43,20 @@ class Finetune(lightning.LightningModule):
         x = (           # (B, T)
             self.model.forwardRegression(x, channel_idx, adapter=True)
         )
-        loss_shape = torch.nn.functional.mse_loss(x, y)     # (B, T)
-        loss_min   = torch.nn.functional.mse_loss(          # (B,)
+        loss_shape = torch.nn.functional.smooth_l1_loss(    # (B,)
+            input=torch.stack([             # (B, 2K+1, [K:-K])
+                torch.roll(x, shifts=s, dims=-1) 
+                for s in range(-self.K, self.K+1)
+            ], dim=1)[:, :, self.K:-self.K],
+            target=y.unsqueeze(1).expand(   # (B, 2K+1, [K:-K])
+                (-1, 2*self.K+1, -1)
+            )[:, :, self.K:-self.K],
+            reduction='none'
+        ).mean(dim=-1).min(dim=-1).values.mean()
+        loss_min   = torch.nn.functional.smooth_l1_loss(    # (B,)
             x.min(dim=-1).values, y.min(dim=-1).values
         )
-        loss_max   = torch.nn.functional.mse_loss(          # (B,)
+        loss_max   = torch.nn.functional.smooth_l1_loss(    # (B,)
             x.max(dim=-1).values, y.max(dim=-1).values
         )
         loss = (
