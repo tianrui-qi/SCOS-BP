@@ -1,7 +1,12 @@
+config_name = "ConfigE03"
+epoch = None
+
+
 # %% # import
-""" import """
+""" setup """
 
 import torch
+import lightning
 import numpy as np
 import pandas as pd
 import scipy.stats
@@ -13,14 +18,13 @@ import dataclasses
 
 import src
 
-if torch.cuda.is_available(): device = "cuda"
-elif torch.backends.mps.is_available(): device = "mps"
-else: device = "cpu"
-
+torch.set_float32_matmul_precision("medium")
+lightning.seed_everything(42, workers=True, verbose=False)
 # disable MPS UserWarning: The operator 'aten::col2im' is not currently 
 # supported on the MPS backend
 warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
 
+# help function to get a ckpt_load_path
 def ckptFinder(config: src.config.Config, epoch: int | None = None) -> str:
     root = config.trainer.ckpt_save_fold
     name = config.__class__.__name__
@@ -30,15 +34,16 @@ def ckptFinder(config: src.config.Config, epoch: int | None = None) -> str:
             return os.path.join(root, name, f)
     raise FileNotFoundError
 
-
-# %% # config
-""" config """
-
-config = src.config.ConfigE07()     # .data and .model will be used
+# device
+if torch.cuda.is_available(): device = "cuda"
+elif torch.backends.mps.is_available(): device = "mps"
+else: device = "cpu"
+# config
+config: src.config.Config = getattr(src.config, config_name)()
 config.eval()
-config.trainer.ckpt_load_path = ckptFinder(config, epoch=None)
+config.trainer.ckpt_load_path = ckptFinder(config, epoch=epoch)
 print(f"load ckpt from {config.trainer.ckpt_load_path}")
-# for prediction save & load
+
 result_fold = f"data/{config.__class__.__name__}/"
 result_path = os.path.join(result_fold, "result.pt")
 profile_path = os.path.join(result_fold, "profile.csv")
@@ -48,7 +53,7 @@ profile_path = os.path.join(result_fold, "profile.csv")
 """ prediction """
 
 # data
-dm = src.data.DataModuleReg(**dataclasses.asdict(config.data))
+dm = src.data.Module(**dataclasses.asdict(config.data))
 dm.setup()
 # model
 model = src.model.SCOST(**dataclasses.asdict(config.model))

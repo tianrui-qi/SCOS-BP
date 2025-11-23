@@ -5,8 +5,10 @@ class ConfigB01(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
-        # [Contrastive, ReconstructionRaw, RegressionSingle]
+        self.data.y_as_x = False
+        self.model.S = 40
+        self.model.stride = 20
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.2,  0.8,  0.0)
         self.runner.lr = 0.001
@@ -25,8 +27,10 @@ class ConfigB02(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
-        # [Contrastive, ReconstructionRaw, RegressionSingle]
+        self.data.y_as_x = False
+        self.model.S = 40
+        self.model.stride = 20
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.5,  0.5,  0.0)
         self.runner.lr = 0.0005
@@ -53,10 +57,12 @@ class ConfigB03(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
+        self.model.S = 40
+        self.model.stride = 20
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 4
-        # [Contrastive, ReconstructionRaw, RegressionSingle]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.0,  0.0,  1.0)
         self.runner.lr = 0.0001
@@ -70,10 +76,12 @@ class ConfigB04(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
+        self.model.S = 40
+        self.model.stride = 20
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
-        # [Contrastive, ReconstructionRaw, RegressionSingle]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.0,  0.0,  1.0)
         self.runner.lr = 0.0001
@@ -98,9 +106,11 @@ class ConfigB05(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
-        # [Contrastive, ReconstructionRaw, RegressionSingle]
+        self.model.S = 40
+        self.model.stride = 20
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner.enable = (True, True, True)
         self.runner.weight = ( 0.0,  1.0,  0.0)
         self.runner.step_size = 20
@@ -111,11 +121,13 @@ class ConfigB06(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
         self.data.batch_size = 1024
         self.data.num_workers = 16
-        # [Contrastive, ReconstructionRaw, RegressionSingle]
+        self.model.S = 40
+        self.model.stride = 20
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner.enable = (False, True, False)
         self.runner.weight = (  0.0,  1.0,   0.0)
         self.runner.lr = 0.0005
@@ -134,13 +146,15 @@ class ConfigB07(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
         self.data.batch_size = 1024
         self.data.num_workers = 16
+        self.model.S = 40
+        self.model.stride = 20
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 4
-        # [Contrastive, ReconstructionRaw, RegressionSingle]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.step_size = 20
@@ -152,13 +166,15 @@ class ConfigB08(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
         self.data.batch_size = 1024
         self.data.num_workers = 16
+        self.model.S = 40
+        self.model.stride = 20
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
-        # [Contrastive, ReconstructionRaw, RegressionSingle]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.lr = 0.001
@@ -172,13 +188,15 @@ class ConfigB09(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
         self.data.batch_size = 1024
         self.data.num_workers = 16
+        self.model.S = 40
+        self.model.stride = 20
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 2
-        # [Contrastive, ReconstructionRaw, RegressionSingle]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.lr = 0.001
@@ -198,7 +216,7 @@ regession head with 2 hidden linear layers and 1 output linear layer. We
 want to see how it perform.
 for enable and weight, now we have four tasks and the order is:
 -   Contrastive
--   ReconstructionRaw
+-   Reconstruction
 -   RegressionSingle
 -   RegressionDeep
 """
@@ -208,13 +226,15 @@ class ConfigB10(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
         self.data.batch_size = 1024
         self.data.num_workers = 16
+        self.model.S = 40
+        self.model.stride = 20
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 4
-        # [Contrastive, ReconstructionRaw, RegressionDeep]
+        # [Contrastive, Reconstruction, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.lr = 0.01
@@ -237,11 +257,13 @@ class ConfigB11(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
+        self.model.S = 40
+        self.model.stride = 20
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 1
-        # [Contrastive, ReconstructionRaw, RegressionDeep]
+        # [Contrastive, Reconstruction, RegressionDeep]
         self.runner.enable = (False, True, True)
         self.runner.weight = (  0.0,  1.0,  1.0)
         self.runner.step_size = 20
@@ -265,11 +287,13 @@ class ConfigB12(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
+        self.model.S = 40
+        self.model.stride = 20
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 1
-        # [Contrastive, ReconstructionRaw, RegressionSingle]
+        # [Contrastive, Reconstruction, RegressionSingle]
         self.runner.enable = (False, True, True)
         self.runner.weight = (  0.0,  1.0,  1.0)
         self.runner.step_size = 20
@@ -401,11 +425,13 @@ class ConfigB22(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
+        self.model.S = 40
+        self.model.stride = 20
         self.runner.freeze_embedding = True
         self.runner.freeze_transformer = 3
-        # [Contrastive, ReconstructionRaw, RegressionDeep]
+        # [Contrastive, Reconstruction, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.step_size = 20
@@ -426,9 +452,11 @@ class ConfigB23(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
-        # [Contrastive, ReconstructionRaw, RegressionDeep]
+        self.model.S = 40
+        self.model.stride = 20
+        # [Contrastive, Reconstruction, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.step_size = 20
@@ -439,9 +467,11 @@ class ConfigB24(Config):
     def __init__(self):
         super().__init__()
         self.data.data_load_path = "data/wave2value.mat"
-        self.data.y_as_channel = False
+        self.data.y_as_x = False
         self.data.split_type = "SubjectDependent"
-        # [Contrastive, ReconstructionRaw, RegressionDeep]
+        self.model.S = 40
+        self.model.stride = 20
+        # [Contrastive, Reconstruction, RegressionDeep]
         self.runner.enable = (False, False, True)
         self.runner.weight = (  0.0,   0.0,  1.0)
         self.runner.step_size = 20

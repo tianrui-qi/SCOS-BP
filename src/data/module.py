@@ -4,18 +4,20 @@ import numpy as np
 import pandas as pd
 
 import scipy.io
-
 from typing import Literal, Final
 
+from .set import Set
 
-class DataModule(lightning.LightningDataModule):
+
+class Module(lightning.LightningDataModule):
     def __init__(
         self,
         # data
-        data_load_path: str,
-        y_as_channel: bool = False,
+        data_load_path: str, 
+        y_as_y: bool = False, 
+        y_as_x: bool = False,
         # normalize
-        mu: float | None = 115.0,
+        mu: float | None = 115.0, 
         sd: float | None = 20.0,
         # split
         split_type: Literal[
@@ -23,14 +25,19 @@ class DataModule(lightning.LightningDataModule):
         ] | None = None,
         split_ratio: tuple[float, float, float] = (0.5, 0.2, 0.3),
         # filter
-        filter_level: Literal["X", "Y", "XY", "All"] | None = None,
+        filter_level: Literal["X|Y", "X", "Y", "X&Y", "All"] | None = None,
+        # dataset
+        channel_perm: bool = False, 
+        channel_drop: float = 0, 
+        channel_shift: float = 0,
         # dataloader
         batch_size: int = 1, num_workers: int = 0,
         **kwargs
     ) -> None:
         super().__init__()
         self._data_load_path: Final = data_load_path
-        self._y_as_channel: Final = y_as_channel
+        self._y_as_y: Final = y_as_y
+        self._y_as_x: Final = y_as_x
         self._mu: Final = mu
         self._sd: Final = sd
         self._split_type: Final = split_type
@@ -39,7 +46,8 @@ class DataModule(lightning.LightningDataModule):
 
         # data
         self.data_load_path: str
-        self.y_as_channel: bool
+        self.y_as_y: bool
+        self.y_as_x: bool
         self.x: torch.Tensor        # (N, C, T), float32
         self.y: torch.Tensor        # (N, ...), float32
         self.profile: pd.DataFrame  # (N, ...)
@@ -51,11 +59,13 @@ class DataModule(lightning.LightningDataModule):
             "SubjectDependent", "SubjectIndependent"
         ] | None
         self.split_ratio: tuple[float, float, float] | None
+        # filter
+        self.filter_level: Literal["X|Y", "X", "Y", "X&Y", "All"] | None
 
         # dataset
-        self.train_dataset: torch.utils.data.Dataset
-        self.val_dataset: torch.utils.data.Dataset
-        self.test_dataset: torch.utils.data.Dataset
+        self.channel_perm = channel_perm
+        self.channel_drop = channel_drop
+        self.channel_shift = channel_shift
         # dataloader
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -64,34 +74,32 @@ class DataModule(lightning.LightningDataModule):
 
     def setup(self, stage: str | None = None) -> None:
         # load
-        self.load_(self._data_load_path, self._y_as_channel)
+        self.load_(self._data_load_path, self._y_as_y, self._y_as_x)
         # normalize
-        self.normalize_(self._mu, self._sd)
+        if self._y_as_y: self.normalize_(self._mu, self._sd)
         # split (https://arxiv.org/pdf/2410.03057)
         if self._split_type is not None:
             fn = getattr(self, f"split{self._split_type}_", None)
             if fn is None: raise ValueError
             fn(self._split_ratio)
         # filter
-        # NOTE:
-        #   must be called after split and normalize to ensure consistency
-        #   for a given dataset
+        # must be called after split and normalize to ensure consistency
+        # for a given dataset
+        # filter_ can only be called once
         self.filter_(self._filter_level)
-        # dataset
-        # NOTE:
-        #   dataset construction is intentionally left empty here
-        #   subclasses should create datasets in their own setup() methods
-        #   after calling super().setup(stage).
 
-    def load_(self, data_load_path: str, y_as_channel: bool = False) -> None:
+    def load_(
+        self, data_load_path: str, y_as_y: bool = False, y_as_x: bool = False
+    ) -> None:
         # load .mat
         data = scipy.io.loadmat(data_load_path)["data_store"][0, 0]
         # x, (N, C, T)
         self.x = torch.tensor(data[0]).to(torch.float).transpose(-1, -2)
         # y, (N, ...)
-        self.y = torch.tensor(data[1]).to(torch.float)
-        # y_as_channel
-        if y_as_channel: 
+        if y_as_y: 
+            self.y = torch.tensor(data[1]).to(torch.float)
+        # append y to last channel of x
+        if y_as_y and y_as_x: 
             self.x = torch.cat([self.x, self.y.unsqueeze(1)], dim=1)
         # profile, metadata of each sample
         def scalarize(arr, dtype=None):
@@ -115,20 +123,31 @@ class DataModule(lightning.LightningDataModule):
         ]
         # update data to current setting
         self.data_load_path = data_load_path
-        self.y_as_channel = y_as_channel
+        self.y_as_y = y_as_y
+        self.y_as_x = y_as_x
         # update normalize to reflect current setting
         # we load new y, so there is no normalization yet
-        self.mu = 0.0
-        self.sd = 1.0
+        if y_as_y:
+            self.mu = 0.0
+            self.sd = 1.0
         # update split to reflect current setting
         # we load new profile, so there is no split yet
         self.split_type = None
         self.split_ratio = None 
+        # update filter to reflect current setting
+        # we load new dataset, so there is no filter yet
+        self.filter_level = None
 
     def normalize_(
         self, mu: float | None = 115.0, sd: float | None = 20.0
     ) -> None:
-        self.denormalize_()     # in case already normalized
+        # if we never load y, do nothing since normolization logic only
+        # apply to y in current design
+        if not self.y_as_y: return
+
+        # in case already normalized
+        self.denormalize_()     
+
         mu_dict = {}
         sd_dict = {}
         for s, profile_s in self.profile.groupby('subject'):
@@ -145,18 +164,31 @@ class DataModule(lightning.LightningDataModule):
             # store
             mu_dict[s] = mu_s
             sd_dict[s] = sd_s
-        if self.y_as_channel: self.x[:, -1, :] = self.y
-        # store normalize paras
+        if self.y_as_x: self.x[:, -1, :] = self.y
+        
+        # update normalize paras
         self.mu = mu_dict if mu is None else mu
         self.sd = sd_dict if sd is None else sd
 
     def denormalize_(self) -> None:
+        # if we never load y, do nothing since normolization logic only
+        # apply to y in current design
+        if not self.y_as_y: return
+
         self.y = self.denormalize()
-        if self.y_as_channel: self.x[:, -1, :] = self.y
+        if self.y_as_x: self.x[:, -1, :] = self.y
+
+        # update normalize paras
         self.mu = 0.0
         self.sd = 1.0
 
     def denormalize(self, y: torch.Tensor | None = None) -> torch.Tensor:
+        # if we never use y, raise error since normolization logic only
+        # apply to y in current design
+        # paras for normalization never init if y_as_y is False and it is 
+        # impossible to denormalize
+        if not self.y_as_y: raise ValueError
+
         if y is None: y = self.y
         # sd
         if isinstance(self.sd, float):
@@ -250,7 +282,7 @@ class DataModule(lightning.LightningDataModule):
                 df_sample.loc[sel, name] = split_id
                 start += c
 
-            # Fallback: if any samples are still unassigned, put them into the 
+            # Fallback: if any samples are still unassigned, put them into the
             # smallest split
             if (df_sample.loc[idx, name] < 0).any():
                 leftover_mask = df_sample.loc[idx, name] < 0
@@ -399,9 +431,24 @@ class DataModule(lightning.LightningDataModule):
         self.split_ratio = ratio
 
     def filter_(
-        self, filter_level: Literal["X", "Y", "XY", "All"] | None = None
+        self, 
+        filter_level: Literal["X|Y", "X", "Y", "X&Y", "All"] | None = None
     ) -> None:
-        if filter_level is None:
+        if not self.y_as_y:
+            if filter_level == "X|Y": filter_level = "X"
+            # filter_level == "X": no effect
+            if filter_level == "Y": filter_level = None
+            if filter_level == "X&Y": filter_level = "X"
+            # filter_level == "All": we will handle it below
+
+        # raise error if already filtered
+        if self.filter_level is not None: raise ValueError
+        # update filter paras
+        self.filter_level = filter_level
+
+        # get valid mask according to filter_level
+        if filter_level is None:  return
+        elif filter_level == "X|Y":
             # at least one channel in x or y must be valid
             valid = ~(
                 torch.isnan(self.x).all(dim=tuple(range(1, self.x.ndim))) &
@@ -413,46 +460,114 @@ class DataModule(lightning.LightningDataModule):
         elif filter_level == "Y":
             # at least one channel in y must be valid
             valid = ~torch.isnan(self.y).all(dim=tuple(range(1, self.y.ndim)))
-        elif filter_level == "XY":
+        elif filter_level == "X&Y":
             # at least one channel in x and one in y must be valid
             valid = (
                 ~torch.isnan(self.x).all(dim=tuple(range(1, self.x.ndim))) &
                 ~torch.isnan(self.y).all(dim=tuple(range(1, self.y.ndim)))
             )
-        elif filter_level == "All":
+        elif filter_level == "All" and not self.y_as_y:
+            # all x channel are valid
+            valid = ~(
+                torch.isnan(self.x).any(dim=tuple(range(1, self.x.ndim)))
+            )
+        elif filter_level == "All" and self.y_as_y:
             # all x and y channel are valid
             valid = ~(
                 torch.isnan(self.x).any(dim=tuple(range(1, self.x.ndim))) |
                 torch.isnan(self.y).any(dim=tuple(range(1, self.y.ndim)))
             )
+        else: raise ValueError
+
+        # apply filter mask
         self.x = self.x[valid]
         self.y = self.y[valid]
         self.profile = self.profile.loc[valid.numpy()].reset_index(drop=True)
+
         # NOTE:
         #   this method defines only a universal NaN-based filter
         #   subclasses may extend this method to apply additional filtering 
         #   criteria
 
-    def train_dataloader(self) -> torch.utils.data.DataLoader:
-        return torch.utils.data.DataLoader(
-            self.train_dataset, shuffle=True, 
+    def train_dataloader(
+        self, subject: str | None = None
+    ) -> torch.utils.data.DataLoader:
+        if subject is None:
+            x = self.x[(
+                self.profile["split"] == 0
+            ).to_numpy()]
+            y = self.y[(
+                self.profile["split"] == 0
+            ).to_numpy()] if self.y_as_y else None
+        else:
+            x = self.x[(
+                (self.profile["subject"] == subject) &
+                (self.profile["condition"] == 1)
+            ).to_numpy()]
+            y = self.y[(
+                (self.profile["subject"] == subject) &
+                (self.profile["condition"] == 1)
+            ).to_numpy()] if self.y_as_y else None
+        dataset = Set(
+            x, y,
+            channel_perm=self.channel_perm, 
+            channel_drop=self.channel_drop,
+            channel_shift=self.channel_shift,
+        )
+        dataloader = torch.utils.data.DataLoader(
+            dataset, shuffle=True, 
             batch_size=self.batch_size, num_workers=self.num_workers, 
             pin_memory=self.pin_memory,
             persistent_workers=self.persistent_workers
         )
+        return dataloader
 
-    def val_dataloader(self) -> torch.utils.data.DataLoader:
-        return torch.utils.data.DataLoader(
-            self.val_dataset, shuffle=False, 
+    def val_dataloader(
+        self, subject: str | None = None
+    ) -> torch.utils.data.DataLoader:
+        if subject is None:
+            x = self.x[(
+                self.profile["split"] == 1
+            ).to_numpy()]
+            y = self.y[(
+                self.profile["split"] == 1
+            ).to_numpy()] if self.y_as_y else None
+        else:
+            x = self.x[(
+                (self.profile["subject"] == subject) &
+                (self.profile["condition"] != 1)
+            ).to_numpy()]
+            y = self.y[(
+                (self.profile["subject"] == subject) &
+                (self.profile["condition"] != 1)
+            ).to_numpy()] if self.y_as_y else None
+        dataset = Set(x, y)
+        dataloader = torch.utils.data.DataLoader(
+            dataset, shuffle=False, 
             batch_size=self.batch_size, num_workers=self.num_workers, 
             pin_memory=self.pin_memory,
             persistent_workers=self.persistent_workers
         )
+        return dataloader
 
-    def test_dataloader(self) -> torch.utils.data.DataLoader:
-        return torch.utils.data.DataLoader(
-            self.test_dataset, shuffle=False, 
+    def test_dataloader(
+        self, subject: str | None = None
+    ) -> torch.utils.data.DataLoader:
+        if subject is None:
+            x = self.x
+            y = self.y if self.y_as_y else None
+        else:
+            x = self.x[(
+                (self.profile["subject"] == subject)
+            ).to_numpy()]
+            y = self.y[(
+                (self.profile["subject"] == subject)
+            ).to_numpy()] if self.y_as_y else None
+        dataset = Set(x, y)
+        dataloader = torch.utils.data.DataLoader(
+            dataset, shuffle=False, 
             batch_size=self.batch_size, num_workers=self.num_workers, 
             pin_memory=self.pin_memory,
             persistent_workers=self.persistent_workers
         )
+        return dataloader

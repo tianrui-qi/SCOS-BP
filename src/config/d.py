@@ -7,10 +7,12 @@ __all__ = []
 class ConfigD(Config):
     def __init__(self):
         super().__init__()
-        self.data.enable = (False, False, True, False)
+        self.data.y_as_y = True
+        self.data.y_as_x = True
         self.data.channel_shift = 25
-        self.model.S = 100
-        self.model.stride = 25
+        # [Contrastive, Reconstruction, Regression]
+        self.runner.enable = (False, True, False)
+        self.runner.weight = (  0.0,  1.0,   0.0)
 
 
 """
@@ -67,7 +69,7 @@ Try to solve calibration problem by put condition 1 data into training as well.
 class ConfigD05(ConfigD):
     def __init__(self):
         super().__init__()
-        self.data.split_type = "split03"    # type: ignore # not support anymore
+        self.data.split_type = "split03"    # type: ignore # not support
         self.data.channel_perm = False
         self.data.channel_drop = 0.5
         self.runner.p_point = 0.05
