@@ -59,7 +59,7 @@ profile_path = os.path.join(result_fold, "profile.csv")
 """ prediction """
 
 # data
-dm = src.data.Pretrain(**dataclasses.asdict(config.data))
+dm = src.data.Module(**dataclasses.asdict(config.data))
 dm.setup()
 # model
 model = src.model.SCOST(**dataclasses.asdict(config.model))

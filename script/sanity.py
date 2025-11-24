@@ -26,7 +26,7 @@ def main():
     elif torch.backends.mps.is_available(): device = "mps"
     else: device = "cpu"
     # data, fixed at first batch
-    dm = src.data.Pretrain(**dataclasses.asdict(config.data))
+    dm = src.data.Module(**dataclasses.asdict(config.data))
     dm.setup()
     x, channel_idx, _ = next(iter(dm.train_dataloader()))
     x, channel_idx = x.to(device), channel_idx.to(device)

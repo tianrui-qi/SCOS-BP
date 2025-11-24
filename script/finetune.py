@@ -50,9 +50,11 @@ def train(config_name: str, subject: str) -> None:
     # config
     config: src.config.Config = getattr(src.config, config_name)()
     # data
-    data = src.data.Finetune(
-        subject=subject, **dataclasses.asdict(config.data)
-    )
+    # setup manually since we will not use datamodule=data in trainer.fit
+    # we input train_dataloader and val_dataloader of trainer.fit manually
+    # so that we can set subject-specific data for dataloader
+    data = src.data.Module(**dataclasses.asdict(config.data))
+    data.setup()
     # model
     model = src.model.SCOST(**dataclasses.asdict(config.model))
     if not config.trainer.resume and \
@@ -97,7 +99,8 @@ def train(config_name: str, subject: str) -> None:
     )
     # fit
     trainer.fit(
-        runner, datamodule=data,
+        runner, train_dataloaders=data.train_dataloader(subject=subject),
+        val_dataloaders=data.val_dataloader(subject=subject),
         ckpt_path=config.trainer.ckpt_load_path
         if config.trainer.resume else None
     )
