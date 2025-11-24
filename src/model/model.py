@@ -4,6 +4,7 @@ from .tokenizer import Tokenizer
 from .masking import Masking
 from .embedding import Embedding
 from .transformer import Transformer
+from .pool import Pool
 from .head import (
     HeadAdapter,
     HeadContrastive, 
@@ -24,12 +25,12 @@ class SCOST(torch.nn.Module):
         self.tokenizer = Tokenizer(segment_length=S, segment_stride=stride)
         self.embedding = Embedding(D, S, C_max, L_max)
         self.transformer = Transformer(D, num_layers, nhead, dim_feedforward)
-        # adapter for subject-specific finetune
-        self.head_adapter = HeadAdapter(D)
-        # heads for different pretext tasks
+        self.pool = Pool()
+        # head
         self.head_contrastive = HeadContrastive(D)
         self.head_reconstruction = HeadReconstruction(D, S)
         self.head_regression = HeadRegression(D, S)
+        self.head_adapter = HeadAdapter(D)
 
     def freeze(
         self, 
@@ -63,8 +64,9 @@ class SCOST(torch.nn.Module):
         user_src_key_padding_mask: (
             int | list[int] | tuple[int, ...] | torch.Tensor | None
         ) = None,
-        pool: bool = True,
+        pool_dim: int | tuple[int, ...] | None = (1, 2),
     ) -> torch.Tensor:
+        B, C, T = x.shape
         x = self.tokenizer.forward(x)   # (B, C, L, S)
         src_key_padding_mask, mask = (  # (B, C, L), (B, C, L)
             Masking.masking(x, x_channel_idx, 
@@ -75,18 +77,23 @@ class SCOST(torch.nn.Module):
         x = self.embedding(             # (B, C, L, D)
             x, x_channel_idx, src_key_padding_mask, mask
         )
-        x = self.transformer(           # (B, D) or (B, C*L, D)
-            x.reshape(x.shape[0], -1, x.shape[-1]),
-            src_key_padding_mask.reshape(x.shape[0], -1),
-            pool=pool,
+        x = self.transformer(           # (B, C*L, D)
+            x.reshape(B, -1, x.shape[-1]),
+            src_key_padding_mask.reshape(B, -1),
         )
-        return x                        # (B, D) or (B, C*L, D)
+        x = self.pool.PoolMean(         # (B, D), (B, C, D), or (B, L, D)
+            x.reshape(B, C, -1, x.shape[-1]),
+            src_key_padding_mask,
+            pool_dim=pool_dim,
+        )
+        return x
 
     def forwardContrastive(
         self, 
         x: torch.Tensor,                # (B, C, T), float
         x_channel_idx: torch.Tensor,    # (B, C), long
     ) -> torch.Tensor:
+        B, C, T = x.shape
         x = self.tokenizer.forward(x)   # (B, C, L, S)
         src_key_padding_mask, mask = (  # (B, C, L), (B, C, L)
             Masking.maskingContrastive_(x, x_channel_idx)
@@ -94,9 +101,14 @@ class SCOST(torch.nn.Module):
         x = self.embedding(             # (B, C, L, D)
             x, x_channel_idx, src_key_padding_mask, mask
         )
-        x = self.transformer(           # (B, D)
-            x.reshape(x.shape[0], -1, x.shape[-1]),
-            src_key_padding_mask.reshape(x.shape[0], -1),
+        x = self.transformer(           # (B, C*L, D)
+            x.reshape(B, -1, x.shape[-1]),
+            src_key_padding_mask.reshape(B, -1),
+        )
+        x = self.pool.PoolMean(         # (B, D)
+            x.reshape(B, C, -1, x.shape[-1]),
+            src_key_padding_mask,
+            pool_dim=(1, 2),
         )
         x = self.head_contrastive(x)    # (B, D)
         return x
@@ -116,6 +128,7 @@ class SCOST(torch.nn.Module):
         p_span_large: tuple[float, float] = (0.0, 1.0),
         p_hide: float = 0.9, p_keep: float = 0.1,
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        B, C, T = x.shape
         x = self.tokenizer.forward(x)   # (B, C, L, S)
         y = x.detach()                  # (B, C, L, S)
         src_key_padding_mask, mask = (  # (B, C, L), (B, C, L)
@@ -136,9 +149,13 @@ class SCOST(torch.nn.Module):
             x, x_channel_idx, src_key_padding_mask, mask
         )
         x = self.transformer(           # (B, C*L, D)
-            x.reshape(x.shape[0], -1, x.shape[-1]),
-            src_key_padding_mask.reshape(x.shape[0], -1),
-            pool=False,
+            x.reshape(B, -1, x.shape[-1]),
+            src_key_padding_mask.reshape(B, -1),
+        )
+        x = self.pool.PoolMean(         # (B, C*L, D)
+            x.reshape(B, C, -1, x.shape[-1]),
+            src_key_padding_mask,
+            pool_dim=None,
         )
         x = self.head_reconstruction(x) # (B, C*L, S)
         return (
@@ -167,15 +184,12 @@ class SCOST(torch.nn.Module):
         ) = None,
         adapter: bool = False,
     ) -> torch.Tensor:
-        B, C, T = x.shape
-        x = self.forward(               # (B, C*L, D)
+        x = self.forward(               # (B, L, D)
             x, x_channel_idx,
             user_mask=user_mask,
             user_src_key_padding_mask=user_src_key_padding_mask,
-            pool=False,
+            pool_dim=(1,),
         )
-        x = x.reshape(B, C, -1, x.shape[-1])    # (B, C, L, D)
-        x = x.mean(1)                   # (B, L, D)
         if adapter: 
             x = self.head_adapter(x)    # (B, L, D)
         x = self.head_regression(x)     # (B, L, S)
