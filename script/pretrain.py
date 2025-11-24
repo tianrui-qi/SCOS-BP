@@ -45,7 +45,7 @@ def train(config_name: str) -> None:
     # config
     config: src.config.Config = getattr(src.config, config_name)()
     # data
-    data = src.data.Pretrain(**dataclasses.asdict(config.data))
+    data = src.data.Module(**dataclasses.asdict(config.data))
     # model
     model = src.model.SCOST(**dataclasses.asdict(config.model))
     if not config.trainer.resume and \

@@ -1,7 +1,5 @@
-from .pretrain import Pretrain
-from .finetune import Finetune
+from .module import Module
 
 __all__ = [
-    "Pretrain",
-    "Finetune",
+    "Module",
 ]
