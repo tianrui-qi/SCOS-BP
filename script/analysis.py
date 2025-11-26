@@ -1,5 +1,5 @@
-config_name, subject, epoch = "Finetune", "S001", 1399
-
+# %%
+config_name = "Finetune"
 
 # %% # setup
 """ setup """
@@ -13,6 +13,7 @@ import os
 import tqdm
 import warnings
 import dataclasses
+import matplotlib.pyplot as plt
 
 import src
 
@@ -22,60 +23,135 @@ lightning.seed_everything(42, workers=True, verbose=False)
 # supported on the MPS backend
 warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
 
-# help function to get a ckpt_load_path
-def ckptFinder(
-    config: src.config.Config, 
-    subject: str | None = None,
-    epoch: int | None = None
-) -> str:
-    ckpt_load_path = os.path.join(
-        config.trainer.ckpt_save_fold, config.__class__.__name__
-    )
-    if subject is not None:
-        ckpt_load_path = os.path.join(ckpt_load_path, subject)
-    target = "last" if epoch is None else f"epoch={epoch:04d}"
-    for f in os.listdir(ckpt_load_path):
-        if target in f and f.endswith(".ckpt"):
-            return os.path.join(ckpt_load_path, f)
-    raise FileNotFoundError
-
 # device
 if torch.cuda.is_available(): device = "cuda"
 elif torch.backends.mps.is_available(): device = "mps"
 else: device = "cpu"
+
 # config
-config: src.config.Config = getattr(src.config, config_name)().eval()
-config.trainer.ckpt_load_path = ckptFinder(
-    config, subject=subject, epoch=epoch
-)
-print(f"load ckpt from {config.trainer.ckpt_load_path}")
-
-result_fold = f"data/{config.__class__.__name__}/"
-result_path = os.path.join(result_fold, "result.pt")
-profile_path = os.path.join(result_fold, "profile.csv")
-
-
-# %% # prediction
-""" prediction """
+config: src.config.Config = getattr(src.config, config_name)()
 
 # data
-dm = src.data.Module(**dataclasses.asdict(config.data))
-dm.setup()
-# model
+data = src.data.Module(**dataclasses.asdict(config.data))
+data.setup()
+
+# %%
+subject = "S001"
+config.runner.weight_min = 0.5
+config.runner.weight_max = 0.5
+
+# %% # load pretrained model and predict backbone outputs
+""" load pretrained model and predict backbone outputs """
+
+# load pretrained model
 model = src.model.SCOST(**dataclasses.asdict(config.model))
-ckpt = torch.load(
-    config.trainer.ckpt_load_path, weights_only=True, 
-    map_location=torch.device(device)
+if config.trainer.ckpt_load_path is None: raise ValueError
+model = src.util.ckptLoader_(model, config.trainer.ckpt_load_path).to(device)
+model.freeze()
+
+# predict backbone outputs
+model.eval()
+x, y = [], []   # (N, L, D), (N, T)
+for batch in data.train_dataloader(subject=subject):
+    batch = [b.to(device) for b in batch]
+    with torch.no_grad(): 
+        x.append(model.forward(batch[0], batch[1], pool_dim=1))
+    y.append(batch[2])
+x_train, y_train = torch.cat(x, dim=0), torch.cat(y, dim=0) 
+x, y = [], []   # (N, L, D), (N, T)
+for batch in data.val_dataloader(subject=subject):
+    batch = [b.to(device) for b in batch]
+    with torch.no_grad(): 
+        x.append(model.forward(batch[0], batch[1], pool_dim=1))
+    y.append(batch[2])
+x_valid, y_valid = torch.cat(x, dim=0), torch.cat(y, dim=0)
+
+# %% # train subject-specific adapter
+""" train subject-specific adapter """
+
+def lossShape(x, y):
+    return torch.nn.functional.smooth_l1_loss(  # (B,)
+        input=torch.stack([
+            torch.roll(x, shifts=s, dims=-1) 
+            for s in range(-config.runner.K, config.runner.K+1)
+        ], dim=1)[:, :, config.runner.K:-config.runner.K],
+        target=y.unsqueeze(1).expand(
+            (-1, 2*config.runner.K+1, -1)
+        )[:, :, config.runner.K:-config.runner.K],
+        reduction='none'
+    ).mean(dim=-1).min(dim=-1).values.mean()
+def lossMin(x, y):
+    return torch.nn.functional.smooth_l1_loss(  # (B,)
+        x.min(dim=-1).values, y.min(dim=-1).values
+    )
+def lossMax(x, y):
+    return torch.nn.functional.smooth_l1_loss(  # (B,)
+        x.max(dim=-1).values, y.max(dim=-1).values
+    )
+
+valid_loss_shape_list, valid_loss_min_list, valid_loss_max_list = [], [], []
+
+optimizer = torch.optim.AdamW(model.parameters(), lr=config.runner.lr)
+scheduler = torch.optim.lr_scheduler.StepLR(
+    optimizer, config.runner.step_size, gamma=config.runner.gamma
 )
-state_dict = {
-    k.replace("model.", ""): v for k, v in ckpt["state_dict"].items()
-    if k.startswith("model.")
-}
-model.load_state_dict(state_dict, strict=False)
-model = model.eval().to(device)
+for epoch in tqdm.tqdm(range(config.trainer.max_epochs)):
+    # train
+    model.train()
+    x = model.forwardAdapter(x_train)
+    train_loss_shape = lossShape(x, y_train)
+    train_loss_min   = lossMin(x, y_train)
+    train_loss_max   = lossMax(x, y_train)
+    train_loss = (
+        config.runner.weight_shape * train_loss_shape +
+        config.runner.weight_min * train_loss_min +
+        config.runner.weight_max * train_loss_max
+    )
+    # backprop
+    optimizer.zero_grad()
+    train_loss.backward()
+    optimizer.step()
+    # scheduler.step()
+    # validate
+    model.eval()
+    with torch.no_grad():
+        x = model.forwardAdapter(x_valid)
+    valid_loss_shape = lossShape(x, y_valid)
+    valid_loss_min   = lossMin(x, y_valid)
+    valid_loss_max   = lossMax(x, y_valid)
+    valid_loss = (
+        config.runner.weight_shape * valid_loss_shape +
+        config.runner.weight_min * valid_loss_min +
+        config.runner.weight_max * valid_loss_max
+    )
+    # log
+    valid_loss_shape_list.append(valid_loss_shape.item())
+    valid_loss_min_list.append(valid_loss_min.item())
+    valid_loss_max_list.append(valid_loss_max.item())
+
+# visualize validation losses, log scale
+plt.figure(figsize=(12,4))
+plt.subplot(1,3,1)
+plt.plot(valid_loss_shape_list)
+plt.title("Validation Loss - Shape")
+plt.yscale("log")
+plt.subplot(1,3,2)
+plt.plot(valid_loss_min_list)
+plt.title("Validation Loss - Min")
+plt.yscale("log")
+plt.subplot(1,3,3)
+plt.plot(valid_loss_max_list)
+plt.title("Validation Loss - Max")
+plt.yscale("log")
+plt.show()
+
+# %% # prediction on all data
+""" prediction on all data """
+
 # predict
 result_b = []
-for batch in tqdm.tqdm(dm.test_dataloader()):
+model.eval()
+for batch in tqdm.tqdm(data.test_dataloader()):
     # batch to device
     x, channel_idx, y = batch
     x, channel_idx, y = x.to(device), channel_idx.to(device), y.to(device)
@@ -94,11 +170,11 @@ result = torch.cat(result_b, dim=0)            # (N, 5, T)
 # and store new waveform in 5th and 6th channel
 result = torch.cat([
     result, 
-    dm.denormalize(result[:, 3, :]).unsqueeze(1),
-    dm.denormalize(result[:, 4, :]).unsqueeze(1),
+    data.denormalize(result[:, 3, :]).unsqueeze(1),
+    data.denormalize(result[:, 4, :]).unsqueeze(1),
 ], dim=1).detach().cpu()
 # store key features in profile
-profile = dm.profile
+profile = data.profile.copy()
 profile["split"] = profile["split"].map({0: "train", 1: "test", 2: "test"})
 profile["system"] = profile["system"].map({False: "old", True: "new"})
 profile["TrueMinBP"] = result[:, 5].min(dim=1).values.numpy()
@@ -107,22 +183,10 @@ profile["PredMinBP"] = result[:, 6].min(dim=1).values.numpy()
 profile["PredMaxBP"] = result[:, 6].max(dim=1).values.numpy()
 profile["(P-T)MinBP"] = profile["PredMinBP"] - profile["TrueMinBP"]
 profile["(P-T)MaxBP"] = profile["PredMaxBP"] - profile["TrueMaxBP"]
-# save result as .pt and sample as .csv in result_save_fold
-# print shape and where saved
-os.makedirs(result_fold, exist_ok=True)
-torch.save(result, result_path)
-profile.to_csv(profile_path, index=False)
-print(f"sample: pd.DataFrame > {profile_path}\t{profile.shape}")
-print(f"result: torch.Tensor > {result_path}\t\t{tuple(result.shape)}")
 
 
-# %% # load
-""" load """
-
-result = torch.load(result_path, weights_only=True)
-profile = pd.read_csv(profile_path)
-
-print("train", "\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
+print("train: {}\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
+    subject,
     np.nanmean(np.abs(
         profile[
             (profile["subject"] == subject) & (profile["condition"] == 1)
@@ -134,7 +198,8 @@ print("train", "\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
         ]["(P-T)MaxBP"]
     )),
 ))
-print("valid", "\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
+print("valid: {}\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
+    subject,
     np.nanmean(np.abs(
         profile[
             (profile["subject"] == subject) & (profile["condition"] != 1)
@@ -146,12 +211,11 @@ print("valid", "\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
         ]["(P-T)MaxBP"]
     )),
 ))
-
 
 # %% # visualization
-""" visualization """
 
-visualization = src.util.Visualization(result, profile)
+""" visualization """
+visualization = src.util.Visualization(result, profile.copy())
 
 
 # %%

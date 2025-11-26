@@ -21,6 +21,7 @@ class SCOST(torch.nn.Module):
         num_layers: int, nhead: int, dim_feedforward: int,
     ) -> None:
         super().__init__()
+        self.num_layers = num_layers    # used in self.freeze()
         # backbone
         self.tokenizer = Tokenizer(segment_length=S, segment_stride=stride)
         self.embedding = Embedding(D, S, C_max, L_max)
@@ -34,10 +35,12 @@ class SCOST(torch.nn.Module):
 
     def freeze(
         self, 
-        freeze_embedding: bool = False, 
-        freeze_transformer: int = 0,
-        freeze_head: bool = False,
+        freeze_embedding: bool = True, 
+        freeze_transformer: int = -1,
+        freeze_head: bool = True,
     ) -> None:
+        if freeze_transformer == -1: freeze_transformer = self.num_layers
+
         if freeze_embedding:
             for param in self.embedding.parameters():
                 param.requires_grad = False
@@ -65,6 +68,7 @@ class SCOST(torch.nn.Module):
             int | list[int] | tuple[int, ...] | torch.Tensor | None
         ) = None,
         pool_dim: int | tuple[int, ...] | None = (1, 2),
+        **kwargs,
     ) -> torch.Tensor:
         B, C, T = x.shape
         x = self.tokenizer.forward(x)   # (B, C, L, S)
@@ -192,6 +196,18 @@ class SCOST(torch.nn.Module):
         )
         if adapter: 
             x = self.head_adapter(x)    # (B, L, D)
+        x = self.head_regression(x)     # (B, L, S)
+        x = x.unsqueeze(1)              # (B, 1, L, S)
+        x = self.tokenizer.backward(x)  # (B, 1, T)
+        x = x.squeeze(1)                # (B, T)
+        return x
+
+
+    def forwardAdapter(
+        self,
+        x: torch.Tensor,                # (B, L, D), float
+    ) -> torch.Tensor:
+        x = self.head_adapter(x)        # (B, L, D)
         x = self.head_regression(x)     # (B, L, S)
         x = x.unsqueeze(1)              # (B, 1, L, S)
         x = self.tokenizer.backward(x)  # (B, 1, T)
