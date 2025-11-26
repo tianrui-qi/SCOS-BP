@@ -39,7 +39,7 @@ class Visualization():
         )
 
         numeric_cols = self.profile.select_dtypes(
-            include=["float64"]
+            include=["float64", "float32"]
         ).columns.tolist()
         controls = self._create_controls(self.profile, numeric_cols)
         plot_output = ipywidgets.Output()

@@ -48,21 +48,10 @@ def train(config_name: str) -> None:
     data = src.data.Module(**dataclasses.asdict(config.data))
     # model
     model = src.model.SCOST(**dataclasses.asdict(config.model))
-    if not config.trainer.resume and \
-    config.trainer.ckpt_load_path is not None:
-        ckpt = torch.load(
-            config.trainer.ckpt_load_path, weights_only=True,
-            map_location=("cuda" if torch.cuda.is_available() else "cpu")
-        )
-        state_dict = {
-            k.replace("model.", ""): v for k, v in ckpt["state_dict"].items()
-            if k.startswith("model.")
-        }
-        model.load_state_dict(state_dict, strict=False)
+    if not config.trainer.resume and config.trainer.ckpt_load_path is not None:
+        model = src.util.ckptLoader_(model, config.trainer.ckpt_load_path)
     # runner
-    runner = src.runner.Pretrain(
-        model=model, **dataclasses.asdict(config.runner)    # type: ignore
-    )
+    runner = src.runner.Pretrain(model, **dataclasses.asdict(config.runner))
     # trainer
     logger = lightning.pytorch.loggers.TensorBoardLogger(
         save_dir=config.trainer.log_save_fold, name=config_name, version="",
@@ -70,19 +59,15 @@ def train(config_name: str) -> None:
     checkpoint = lightning.pytorch.callbacks.ModelCheckpoint(
         dirpath=os.path.join(config.trainer.ckpt_save_fold, config_name),
         every_n_epochs=config.trainer.every_n_epochs,
-        filename="{epoch:04d}",
-        save_top_k=-1,
-        save_last=True,
+        filename="{epoch:04d}", save_top_k=-1, save_last=True,
     )
     lrmonitor = lightning.pytorch.callbacks.LearningRateMonitor(
         logging_interval="step"
     )
     trainer = lightning.Trainer(
-        logger=logger,
-        callbacks=[checkpoint, lrmonitor],
+        logger=logger, callbacks=[checkpoint, lrmonitor],
         max_epochs=config.trainer.max_epochs,
-        log_every_n_steps=1,
-        benchmark=True,
+        log_every_n_steps=1, benchmark=True,
     )
     # fit
     trainer.fit(

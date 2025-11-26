@@ -11,6 +11,7 @@ class Config():
         self.trainer: ConfigTrainer = ConfigTrainer()
 
     def eval(self) -> "Config":
+        # TODO: delete this in the future since it cause confusion
         self.data.filter_level = "All"
         # we already close perturb and augment when using test_dataloader
         # close them again as a backup
