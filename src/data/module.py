@@ -480,7 +480,7 @@ class Module(lightning.LightningDataModule):
 
         # apply filter mask
         self.x = self.x[valid]
-        self.y = self.y[valid]
+        if self.y_as_y: self.y = self.y[valid]
         self.profile = self.profile.loc[valid.numpy()].reset_index(drop=True)
 
         # NOTE:

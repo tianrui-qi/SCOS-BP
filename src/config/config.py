@@ -10,9 +10,7 @@ class Config():
         self.runner: ConfigRunner = ConfigRunner()
         self.trainer: ConfigTrainer = ConfigTrainer()
 
-    def eval(self) -> "Config":
-        # TODO: delete this in the future since it cause confusion
-        self.data.filter_level = "All"
+    def analysis(self) -> "Config":
         # we already close perturb and augment when using test_dataloader
         # close them again as a backup
         self.data.channel_perm = False

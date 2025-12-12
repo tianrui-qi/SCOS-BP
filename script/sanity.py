@@ -19,7 +19,8 @@ def main():
     step = 1000
     # config
     config = src.config.PretrainT()
-    config.eval()   # turn off all augmentations
+    config.analysis()                   # turn off all augmentations
+    config.data.filter_level = "All"    # mask sure all channels are valid
     config.data.batch_size = 32
     # device
     if torch.cuda.is_available(): device = "cuda"
