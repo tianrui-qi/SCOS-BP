@@ -4,13 +4,15 @@
 import torch
 import lightning
 import numpy as np
-
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
+import sklearn.decomposition
+import umap
 
 import os
+import logging
 import warnings
 import dataclasses
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 import src
 
@@ -19,6 +21,8 @@ lightning.seed_everything(42, workers=True, verbose=False)
 # disable MPS UserWarning: The operator 'aten::col2im' is not currently 
 # supported on the MPS backend
 warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
+# disable matplotlib findfont warnings
+logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
 
 # device
 if torch.cuda.is_available(): device = "cuda"
@@ -1187,9 +1191,9 @@ ax_right.tick_params(
 )
 
 plt.tight_layout()
-print("saved: data/presentation/DataStageSplit.png")
+print("saved: data/presentation/DataSplit.png")
 plt.savefig(
-    "data/presentation/DataStageSplit.png",
+    "data/presentation/DataSplit.png",
     format="png",
     dpi=400,
     bbox_inches="tight",
@@ -1197,6 +1201,115 @@ plt.savefig(
 )
 # plt.show()
 plt.close(fig)
+
+
+# %% # Result: Stage 1 & 2
+""" Result: Stage 1 & 2 """
+
+# config
+config = src.config.Config().analysis()
+config.data.filter_level = "All"
+# data
+data = src.data.Module(**dataclasses.asdict(config.data))
+data.setup()
+
+profile = data.profile.copy()
+
+# 1. Blood Pressure
+bp_np = data.y.detach().cpu().numpy()   # (N, T)
+profile["diastole"] = bp_np.min(axis=1)
+profile["systole"]  = bp_np.max(axis=1)
+# per-subject min-max normalization
+_d_min = profile.groupby("subject")["diastole"].transform("min")
+_d_max = profile.groupby("subject")["diastole"].transform("max")
+_d_denom = (_d_max - _d_min).replace(0, np.finfo(float).eps)
+profile["diastole"] = (profile["diastole"] - _d_min) / _d_denom
+_s_min = profile.groupby("subject")["systole"].transform("min")
+_s_max = profile.groupby("subject")["systole"].transform("max")
+_s_denom = (_s_max - _s_min).replace(0, np.finfo(float).eps)
+profile["systole"]  = (profile["systole"]  - _s_min) / _s_denom
+
+# 2. Sample Index T within Subject
+# for example, S001: 0,1,2,...; S002: 0,1,2,...; ...
+profile["T"] = profile.groupby("subject").cumcount().astype(int)
+
+# 3. Representation of Stage 1
+# model
+model = src.model.SCOST(**dataclasses.asdict(config.model))
+model = src.util.ckptLoader_(
+    model, "ckpt/PretrainT/epoch=3885-step=248704.ckpt"
+).to(device)
+model.freeze()
+model.eval()
+# representation
+temp = []
+for batch in data.test_dataloader():
+    batch = [b.to(device) for b in batch]
+    with torch.no_grad(): temp.append(model.forward(batch[0], batch[1]))
+representation = torch.cat(temp, dim=0).detach().cpu().numpy()  # (N, D)
+# UMAP
+u = umap.UMAP(n_jobs=1, random_state=42)
+u_2 = u.fit_transform(representation)       # (N, 2)
+u_2 -= u_2.mean(axis=0)     # type: ignore
+u_2 /= u_2.std(axis=0)      # type: ignore
+# PCA
+pca = sklearn.decomposition.PCA(n_components=6, random_state=42)
+pca_6 = pca.fit_transform(representation)  # (N, 6)
+# print("\texplained variance ratio: " + ", ".join(
+#     f"{v:.2f}%" for v in pca.explained_variance_ratio_ * 100
+# ))
+# print(f"\ttotal: {(pca.explained_variance_ratio_ * 100).sum():.2f}%")
+# save UMAP and PCA coordinate to profile
+profile[["S1_UMAP1", "S1_UMAP2"]] = u_2
+for i in range(pca_6.shape[1]): profile[f"S1_PC{i+1}"] = pca_6[:, i]
+
+# 4. Representation of Stage 2
+# model
+model = src.model.SCOST(**dataclasses.asdict(config.model))
+model = src.util.ckptLoader_(
+    model, "ckpt/PretrainH/last.ckpt"
+).to(device)
+model.freeze()
+model.eval()
+# representation
+temp = []
+for batch in data.test_dataloader():
+    batch = [b.to(device) for b in batch]
+    with torch.no_grad(): temp.append(model.forward(batch[0], batch[1]))
+representation = torch.cat(temp, dim=0).detach().cpu().numpy()  # (N, D)
+# UMAP
+u = umap.UMAP(n_jobs=1, random_state=42)
+u_2 = u.fit_transform(representation)       # (N, 2)
+u_2 -= u_2.mean(axis=0)     # type: ignore
+u_2 /= u_2.std(axis=0)      # type: ignore
+# PCA
+pca = sklearn.decomposition.PCA(n_components=6, random_state=42)
+pca_6 = pca.fit_transform(representation)  # (N, 6)
+# print("\texplained variance ratio: " + ", ".join(
+#     f"{v:.2f}%" for v in pca.explained_variance_ratio_ * 100
+# ))
+# print(f"\ttotal: {(pca.explained_variance_ratio_ * 100).sum():.2f}%")
+# save UMAP and PCA coordinate to profile
+profile[["S2_UMAP1", "S2_UMAP2"]] = u_2
+for i in range(pca_6.shape[1]): profile[f"S2_PC{i+1}"] = pca_6[:, i]
+
+# store profile, x, y in data/presentation/Result
+os.makedirs("data/presentation/ResultPretrain", exist_ok=True)
+profile.to_csv(
+    "data/presentation/ResultPretrain/profile.csv",
+    index=False,
+)
+np.save(
+    "data/presentation/ResultPretrain/x.npy",
+    data.x.detach().cpu().numpy(),
+)
+np.save(
+    "data/presentation/ResultPretrain/y.npy",
+    data.y.detach().cpu().numpy(),
+)
+
+print("Please run the following command to launch result visualization:")
+print("voila app.ipynb")
 
 
 # %%

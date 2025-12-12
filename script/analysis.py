@@ -215,7 +215,7 @@ print("valid: {}\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
 # %% # visualization
 
 """ visualization """
-visualization = src.util.Visualization(result, profile.copy())
+visualization = src.util.VisualizationPrediction(result, profile.copy())
 
 
 # %%

@@ -1,8 +1,15 @@
-from .visualization import Visualization
-from .ckpt import ckptFinder, ckptLoader_
+from .visualization import (
+    VisualizationRepresentation, 
+    VisualizationPrediction
+)
+from .ckpt import (
+    ckptFinder, 
+    ckptLoader_
+)
 
 __all__ = [
-    "Visualization", 
+    "VisualizationRepresentation",
+    "VisualizationPrediction", 
     "ckptFinder",
     "ckptLoader_",
 ]
