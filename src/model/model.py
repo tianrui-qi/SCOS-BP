@@ -13,12 +13,12 @@ from .head import (
 )
 
 
-class SCOST(torch.nn.Module):
+class Model(torch.nn.Module):
     def __init__(
         self, D: int, 
         S: int, stride: int, 
         C_max: int, L_max: int,
-        num_layers: int, nhead: int, dim_feedforward: int,
+        num_layers: int = 4, nhead: int = 8, dim_feedforward: int = 1024,
     ) -> None:
         super().__init__()
         self.num_layers = num_layers    # used in self.freeze()
@@ -85,7 +85,7 @@ class SCOST(torch.nn.Module):
             x.reshape(B, -1, x.shape[-1]),
             src_key_padding_mask.reshape(B, -1),
         )
-        x = self.pool.PoolMean(         # (B, D), (B, C, D), or (B, L, D)
+        x = self.pool.PoolMean(         # (B, C, L, D) before pooling
             x.reshape(B, C, -1, x.shape[-1]),
             src_key_padding_mask,
             pool_dim=pool_dim,
@@ -164,13 +164,13 @@ class SCOST(torch.nn.Module):
         x = self.head_reconstruction(x) # (B, C*L, S)
         return (
             # return waveform for all tokens by inverse tokenizer
-            (                           # B, C, T), (B, C, T)
+            (                           # (B, C, T), (B, C, T)
                 self.tokenizer.backward(x.reshape_as(y)),
                 self.tokenizer.backward(y),
             )
         ) if user_mask is not None else (
             # return waveform at masked token only
-            (                           # #mask, S), (#mask, S)
+            (                           # (#mask, S), (#mask, S)
                 x.reshape_as(y)[mask != 0],
                 y[mask != 0],
             )
@@ -186,7 +186,6 @@ class SCOST(torch.nn.Module):
         user_src_key_padding_mask: (
             int | list[int] | tuple[int, ...] | torch.Tensor | None
         ) = None,
-        adapter: bool = False,
     ) -> torch.Tensor:
         x = self.forward(               # (B, L, D)
             x, x_channel_idx,
@@ -194,14 +193,35 @@ class SCOST(torch.nn.Module):
             user_src_key_padding_mask=user_src_key_padding_mask,
             pool_dim=(1,),
         )
-        if adapter: 
-            x = self.head_adapter(x)    # (B, L, D)
         x = self.head_regression(x)     # (B, L, S)
         x = x.unsqueeze(1)              # (B, 1, L, S)
         x = self.tokenizer.backward(x)  # (B, 1, T)
         x = x.squeeze(1)                # (B, T)
         return x
 
+    def forwardRegressionAdapter(
+        self, 
+        x: torch.Tensor,                # (B, C, T), float
+        x_channel_idx: torch.Tensor,    # (B, C), long
+        user_mask: (
+            int | list[int] | tuple[int, ...] | torch.Tensor | None
+        ) = None,
+        user_src_key_padding_mask: (
+            int | list[int] | tuple[int, ...] | torch.Tensor | None
+        ) = None,
+    ) -> torch.Tensor:
+        x = self.forward(               # (B, L, D)
+            x, x_channel_idx,
+            user_mask=user_mask,
+            user_src_key_padding_mask=user_src_key_padding_mask,
+            pool_dim=(1,),
+        )
+        x = self.head_adapter(x)        # (B, L, D)
+        x = self.head_regression(x)     # (B, L, S)
+        x = x.unsqueeze(1)              # (B, 1, L, S)
+        x = self.tokenizer.backward(x)  # (B, 1, T)
+        x = x.squeeze(1)                # (B, T)
+        return x
 
     def forwardAdapter(
         self,

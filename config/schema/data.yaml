@@ -1,0 +1,22 @@
+data:
+  # data
+  data_load_path: data/wave2wave.mat
+  y_as_y: false
+  y_as_x: false
+  # normalization
+  mu: 115.0 # set to null if want per-subject mu
+  sd: 20.0  # set to null if want per-subject sd
+  # split
+  # choices: SubjectDependent, SubjectIndependent, null
+  split_type: SubjectIndependent  
+  split_ratio: [0.5, 0.2, 0.3]
+  # filter
+  # choices: X|Y, X, Y, X&Y, All, null
+  filter_level: X
+  # dataset
+  channel_perm: false
+  channel_drop: 0.0   # probability to enable channel drop
+  channel_shift: 0
+  # dataloader
+  batch_size: 256
+  num_workers: 0

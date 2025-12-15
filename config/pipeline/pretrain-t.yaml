@@ -1,0 +1,19 @@
+# @package _global_
+
+defaults:
+  - /config@_here_
+  - _self_
+
+name: pretrain-t
+
+data:
+  filter_level: X
+  channel_perm: true
+  channel_drop: 0.4
+  channel_shift: 25
+
+objective:
+  task:
+    stepReconstruction: 1.0
+  p_span_small: [0.0, 0.2]
+  p_span_large: [0.2, 0.4]

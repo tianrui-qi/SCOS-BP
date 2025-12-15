@@ -1,0 +1,13 @@
+model:
+  # dimension
+  D: 256
+  # tokenizer
+  S: 100
+  stride: 25
+  # embedding limits
+  C_max: 8
+  L_max: 1024
+  # transformer
+  num_layers: 4
+  nhead: 8
+  dim_feedforward: 1024

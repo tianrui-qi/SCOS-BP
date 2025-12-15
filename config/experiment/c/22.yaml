@@ -1,0 +1,17 @@
+# @package _global_
+
+defaults:
+  - /experiment/c/base-h@_here_
+  - _self_
+
+name: c/22
+
+data:
+  split_type: SubjectIndependent
+
+model:
+  S: 100
+  stride: 25
+
+trainer:
+  ckpt_load_path: ckpt/c/08/last.ckpt

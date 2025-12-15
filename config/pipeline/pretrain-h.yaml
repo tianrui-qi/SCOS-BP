@@ -1,0 +1,25 @@
+# @package _global_
+
+defaults:
+  - /config@_here_
+  - _self_
+
+name: pretrain-h
+
+data:
+  y_as_y: true
+  filter_level: X&Y
+  channel_perm: true
+  channel_drop: 0.2
+
+objective:
+  freeze_embedding: true
+  freeze_transformer: 3
+  task:
+    stepReconstruction: 0.1
+    stepRegression: 0.9
+  lr: 0.0005
+  ckpt_load_path: "ckpt/pretrain-t/epoch=3885-step=248704.ckpt"
+
+trainer:
+  max_epochs: 4000

@@ -1,0 +1,19 @@
+# @package _global_
+
+defaults:
+  - /experiment/b/base@_here_
+  - _self_
+
+name: b/05
+
+data:
+  split_type: SubjectDependent
+
+objective:
+  task:
+    stepContrastive: 0.0
+    stepReconstruction: 1.0
+    stepRegressionSingle: 0.0 # deprecated
+
+trainer:
+  max_epochs: 3620

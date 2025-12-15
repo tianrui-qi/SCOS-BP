@@ -1,0 +1,13 @@
+# @package _global_
+
+defaults:
+  - /config@_here_
+  - _self_
+
+name: sanity
+
+data:
+  filter_level: All
+  batch_size: 32
+
+step: 1000

@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - /experiment/b/base@_here_
+  - _self_
+
+name: b/15
+
+data:
+  split_type: SubjectDependent
+
+objective:
+  freeze_embedding: true
+  freeze_transformer: 3
+  task:
+    stepRegression: 1.0
+
+trainer:
+  ckpt_load_path: ckpt/b/13-3/last.ckpt
+  resume: true

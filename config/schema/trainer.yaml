@@ -1,0 +1,9 @@
+trainer:
+  max_epochs: 10000
+  # log
+  log_save_fold: log/${name}
+  # ckpt
+  ckpt_save_fold: ckpt/${name}
+  every_n_epochs: 100
+  ckpt_load_path: null
+  resume: false

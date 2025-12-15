@@ -1,0 +1,14 @@
+# @package _global_
+
+defaults:
+  - /experiment/c/base-t@_here_
+  - _self_
+
+name: c/20
+
+data:
+  split_type: SubjectIndependent
+
+model:
+  S: 100
+  stride: 25

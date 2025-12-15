@@ -1,0 +1,26 @@
+# @package _global_
+
+defaults:
+  - /experiment/b/base@_here_
+  - _self_
+
+name: b/14-${hydra:job.num}
+
+data:
+  split_type: SubjectDependent
+
+objective:
+  freeze_embedding: true
+  freeze_transformer: 3
+  task:
+    stepRegression: 1.0
+
+trainer:
+  max_epochs: 500
+  ckpt_load_path: ckpt/b/10/last.ckpt
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params: 
+      data.batch_size: 32,128,512,2048

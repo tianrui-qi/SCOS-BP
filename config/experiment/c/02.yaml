@@ -1,0 +1,19 @@
+# @package _global_
+
+defaults:
+  - /experiment/c/base-t@_here_
+  - _self_
+
+name: c/02
+
+model:
+  S: 100
+  stride: 75
+
+objective:
+  lr: 0.0001
+  step_size: 50
+
+trainer:
+  max_epochs: 5700
+  ckpt_load_path: ckpt/c/01/last.ckpt

@@ -1,21 +1,25 @@
+# TODO: clean up!!
+
 # %%
 config_name = "Finetune"
 
 # %% # setup
 """ setup """
 
-import torch
-import lightning
-import numpy as np
-import pandas as pd
-
-import os
 import tqdm
 import warnings
-import dataclasses
+
+import lightning
+import numpy as np
+import torch
+
 import matplotlib.pyplot as plt
 
+
+
 import src
+import config
+import visualization
 
 torch.set_float32_matmul_precision("medium")
 lightning.seed_everything(42, workers=True, verbose=False)
@@ -29,24 +33,24 @@ elif torch.backends.mps.is_available(): device = "mps"
 else: device = "cpu"
 
 # config
-config: src.config.Config = getattr(src.config, config_name)()
+config: config.Config = getattr(config, config_name)()
 
 # data
-data = src.data.Module(**dataclasses.asdict(config.data))
+data = src.data.DataModule(**vars(config.data))
 data.setup()
 
 # %%
 subject = "S001"
-config.runner.weight_min = 0.5
-config.runner.weight_max = 0.5
+config.objective.weight_min = 0.5
+config.objective.weight_max = 0.5
 
 # %% # load pretrained model and predict backbone outputs
 """ load pretrained model and predict backbone outputs """
 
 # load pretrained model
-model = src.model.SCOST(**dataclasses.asdict(config.model))
+model = src.model.Model(**vars(config.model))
 if config.trainer.ckpt_load_path is None: raise ValueError
-model = src.util.ckptLoader_(model, config.trainer.ckpt_load_path).to(device)
+src.trainer.Trainer.ckptLoader_(model, config.trainer.ckpt_load_path).to(device)
 model.freeze()
 
 # predict backbone outputs
@@ -73,11 +77,11 @@ def lossShape(x, y):
     return torch.nn.functional.smooth_l1_loss(  # (B,)
         input=torch.stack([
             torch.roll(x, shifts=s, dims=-1) 
-            for s in range(-config.runner.K, config.runner.K+1)
-        ], dim=1)[:, :, config.runner.K:-config.runner.K],
+            for s in range(-config.objective.K, config.objective.K+1)
+        ], dim=1)[:, :, config.objective.K:-config.objective.K],
         target=y.unsqueeze(1).expand(
-            (-1, 2*config.runner.K+1, -1)
-        )[:, :, config.runner.K:-config.runner.K],
+            (-1, 2*config.objective.K+1, -1)
+        )[:, :, config.objective.K:-config.objective.K],
         reduction='none'
     ).mean(dim=-1).min(dim=-1).values.mean()
 def lossMin(x, y):
@@ -91,9 +95,9 @@ def lossMax(x, y):
 
 valid_loss_shape_list, valid_loss_min_list, valid_loss_max_list = [], [], []
 
-optimizer = torch.optim.AdamW(model.parameters(), lr=config.runner.lr)
+optimizer = torch.optim.AdamW(model.parameters(), lr=config.objective.lr)
 scheduler = torch.optim.lr_scheduler.StepLR(
-    optimizer, config.runner.step_size, gamma=config.runner.gamma
+    optimizer, config.objective.step_size, gamma=config.objective.gamma
 )
 for epoch in tqdm.tqdm(range(config.trainer.max_epochs)):
     # train
@@ -103,9 +107,9 @@ for epoch in tqdm.tqdm(range(config.trainer.max_epochs)):
     train_loss_min   = lossMin(x, y_train)
     train_loss_max   = lossMax(x, y_train)
     train_loss = (
-        config.runner.weight_shape * train_loss_shape +
-        config.runner.weight_min * train_loss_min +
-        config.runner.weight_max * train_loss_max
+        config.objective.weight_shape * train_loss_shape +
+        config.objective.weight_min * train_loss_min +
+        config.objective.weight_max * train_loss_max
     )
     # backprop
     optimizer.zero_grad()
@@ -120,9 +124,9 @@ for epoch in tqdm.tqdm(range(config.trainer.max_epochs)):
     valid_loss_min   = lossMin(x, y_valid)
     valid_loss_max   = lossMax(x, y_valid)
     valid_loss = (
-        config.runner.weight_shape * valid_loss_shape +
-        config.runner.weight_min * valid_loss_min +
-        config.runner.weight_max * valid_loss_max
+        config.objective.weight_shape * valid_loss_shape +
+        config.objective.weight_min * valid_loss_min +
+        config.objective.weight_max * valid_loss_max
     )
     # log
     valid_loss_shape_list.append(valid_loss_shape.item())
@@ -156,8 +160,8 @@ for batch in tqdm.tqdm(data.test_dataloader()):
     x, channel_idx, y = batch
     x, channel_idx, y = x.to(device), channel_idx.to(device), y.to(device)
     # forward
-    with torch.no_grad(): x_pred = model.forwardRegression(
-        x, channel_idx, adapter=True
+    with torch.no_grad(): x_pred = model.forwardRegressionAdapter(
+        x, channel_idx
     )
     # store result
     result_b.append(torch.cat([
@@ -215,7 +219,7 @@ print("valid: {}\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
 # %% # visualization
 
 """ visualization """
-visualization = src.util.VisualizationPrediction(result, profile.copy())
+visualization.VisualizationPrediction(result, profile.copy())
 
 
 # %%

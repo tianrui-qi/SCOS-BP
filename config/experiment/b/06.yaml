@@ -1,0 +1,22 @@
+# @package _global_
+
+defaults:
+  - /experiment/b/base@_here_
+  - _self_
+
+name: b/06
+
+data:
+  split_type: SubjectDependent
+  batch_size: 1024
+
+objective:
+  task:
+    stepContrastive: 0.0
+    stepReconstruction: 1.0
+    stepRegressionSingle: 0.0 # deprecated
+  lr: 0.0005
+
+trainer:
+  max_epochs: 4861
+  ckpt_load_path: ckpt/b/05/last.ckpt

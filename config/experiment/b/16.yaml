@@ -1,0 +1,17 @@
+# @package _global_
+
+defaults:
+  - /experiment/b/base@_here_
+  - _self_
+
+name: b/16
+
+data:
+  split_type: SubjectDependent
+
+objective:
+  task:
+    stepRegression: 1.0
+
+trainer:
+  max_epochs: 7580

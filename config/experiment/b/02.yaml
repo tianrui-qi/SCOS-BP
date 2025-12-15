@@ -1,0 +1,18 @@
+# @package _global_
+
+defaults:
+  - /experiment/b/base@_here_
+  - _self_
+
+name: b/02
+
+objective:
+  task:
+    stepContrastive: 0.5
+    stepReconstruction: 0.5
+    stepRegressionSingle: 0.0 # deprecated
+  lr: 0.0005
+
+trainer:
+  max_epochs: 4055
+  ckpt_load_path: ckpt/b/01/last.ckpt

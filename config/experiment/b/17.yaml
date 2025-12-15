@@ -1,0 +1,17 @@
+# @package _global_
+
+defaults:
+  - /experiment/b/base@_here_
+  - _self_
+
+name: b/17
+
+data:
+  split_type: SubjectDependent
+
+objective:
+  task:
+    stepRegression: 1.0
+
+trainer:
+  ckpt_load_path: ckpt/b/16/last.ckpt

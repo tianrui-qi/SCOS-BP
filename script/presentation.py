@@ -1,16 +1,19 @@
+# TODO: clean up!!
+
 # %% # setup
 """ setup """
-
-import torch
-import lightning
-import numpy as np
-import sklearn.decomposition
-import umap
 
 import os
 import logging
 import warnings
-import dataclasses
+import hydra
+
+import lightning
+import numpy as np
+import sklearn.decomposition
+import torch
+import umap
+
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
@@ -29,6 +32,9 @@ if torch.cuda.is_available(): device = "cuda"
 elif torch.backends.mps.is_available(): device = "mps"
 else: device = "cpu"
 
+# config
+with hydra.initialize(version_base=None, config_path="config"):
+    cfg = hydra.compose(config_name="config")
 
 # %% # Data: Preparation
 """ Data: Preparation """
@@ -250,10 +256,8 @@ def saveSample(
 
     print(f"saved: {filename}")
 
-# config
-config = src.config.Config()
 # data
-data = src.data.Module(**dataclasses.asdict(config.data))
+data = src.data.DataModule(**cfg.data)
 data.setup()
 data.denormalize_()
 
@@ -278,10 +282,8 @@ saveSample(
 # %% # Data: Profile
 """ Data: Profile """
 
-# config
-config = src.config.Config()
 # data
-data = src.data.Module(**dataclasses.asdict(config.data))
+data = src.data.DataModule(**cfg.data)
 data.setup()
 
 # ============================================================
@@ -674,13 +676,11 @@ def save_tokens_and_grid(
 
     print(f"saved: {out_dir}/{{ch}}_token{{l}}.svg ({C*L} files)")
 
-# config
-config = src.config.Config()
 # data
-data = src.data.Module(**dataclasses.asdict(config.data))
+data = src.data.DataModule(**cfg.data)
 data.setup()
 # model
-model = src.model.SCOST(**dataclasses.asdict(config.model))
+model = src.model.Model(**cfg.model)
 
 sample_idx = 4
 # original waveform
@@ -704,10 +704,8 @@ save_tokens_and_grid(
 # %% # Data: Stage 1 & 2 Split
 """ Data: Stage 1 & 2 Split """
 
-# config
-config = src.config.Config()
 # data
-data = src.data.Module(**dataclasses.asdict(config.data))
+data = src.data.DataModule(**cfg.data)
 data.setup()
 
 # ============================================================
@@ -1207,10 +1205,9 @@ plt.close(fig)
 """ Result: Stage 1 & 2 """
 
 # config
-config = src.config.Config().analysis()
-config.data.filter_level = "All"
+cfg.data.filter_level = "All"
 # data
-data = src.data.Module(**dataclasses.asdict(config.data))
+data = src.data.DataModule(**cfg.data)
 data.setup()
 
 profile = data.profile.copy()
@@ -1235,8 +1232,8 @@ profile["T"] = profile.groupby("subject").cumcount().astype(int)
 
 # 3. Representation of Stage 1
 # model
-model = src.model.SCOST(**dataclasses.asdict(config.model))
-model = src.util.ckptLoader_(
+model = src.model.Model(**cfg.model)
+src.trainer.Trainer.ckptLoader_(
     model, "ckpt/PretrainT/epoch=3885-step=248704.ckpt"
 ).to(device)
 model.freeze()
@@ -1265,8 +1262,8 @@ for i in range(pca_6.shape[1]): profile[f"S1_PC{i+1}"] = pca_6[:, i]
 
 # 4. Representation of Stage 2
 # model
-model = src.model.SCOST(**dataclasses.asdict(config.model))
-model = src.util.ckptLoader_(
+model = src.model.Model(**cfg.model)
+src.trainer.Trainer.ckptLoader_(
     model, "ckpt/PretrainH/last.ckpt"
 ).to(device)
 model.freeze()

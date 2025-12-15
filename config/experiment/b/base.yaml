@@ -1,0 +1,16 @@
+defaults:
+  - /config@_here_
+  - _self_
+
+data:
+  data_load_path: data/wave2value.mat
+  y_as_y: true
+  channel_perm: true
+  channel_drop: 1.0
+
+model:
+  S: 40
+  stride: 20
+
+objective:
+  step_size: 20

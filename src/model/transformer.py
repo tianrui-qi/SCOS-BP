@@ -3,7 +3,8 @@ import torch
 
 class Transformer(torch.nn.Module):
     def __init__(
-        self, D: int, num_layers: int, nhead: int, dim_feedforward: int,
+        self, D: int, 
+        num_layers: int = 4, nhead: int = 8, dim_feedforward: int = 1024,
     ) -> None:
         super().__init__()
         self.encoder = torch.nn.TransformerEncoder(

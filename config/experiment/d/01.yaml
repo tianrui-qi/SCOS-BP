@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - /experiment/d/base@_here_
+  - _self_
+
+name: d/01
+
+data:
+  split_type: SubjectDependent
+  channel_perm: true
+  channel_drop: 0.5
+
+trainer:
+  max_epochs: 2640

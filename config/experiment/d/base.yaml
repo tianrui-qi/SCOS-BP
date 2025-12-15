@@ -1,0 +1,12 @@
+defaults:
+  - /config@_here_
+  - _self_
+
+data:
+  y_as_y: true
+  y_as_x: true
+  channel_shift: 25
+
+objective:
+  task:
+    stepReconstruction: 1.0

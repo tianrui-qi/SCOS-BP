@@ -1,0 +1,22 @@
+# @package _global_
+
+defaults:
+  - /experiment/d/base@_here_
+  - _self_
+
+name: d/05
+
+data:
+  split_type: split03 # deprecated
+  channel_perm: false
+  channel_drop: 0.5
+
+objective:
+  p_point: 0.05
+  p_span_small: [0.3, 0.5]
+  p_span_large: [0.9, 1.0]
+  lr: 0.0008
+
+trainer:
+  max_epochs: 5340
+  ckpt_load_path: ckpt/d/04/last.ckpt

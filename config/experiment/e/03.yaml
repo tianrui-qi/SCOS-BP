@@ -1,0 +1,21 @@
+# @package _global_
+
+defaults:
+  - /experiment/e/base-h@_here_
+  - _self_
+
+name: e/03
+
+data:
+  channel_drop: 0.2
+
+objective:
+  freeze_embedding: true
+  freeze_transformer: 3
+  task:
+    stepReconstruction: 0.1
+    stepRegression: 0.9
+  lr: 0.0005
+
+trainer:
+  ckpt_load_path: ckpt/e/02/epoch=3885-step=248704.ckpt

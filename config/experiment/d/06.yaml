@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - /experiment/d/base@_here_
+  - _self_
+
+name: d/06
+
+data:
+  channel_perm: true
+  channel_drop: 1.0
+
+objective:
+  p_span_small: [0.0, 0.8]
+  p_span_large: [0.8, 1.0]
+  lr: 0.0005
+
+trainer:
+  max_epochs: 7610
+  ckpt_load_path: ckpt/d/03/last.ckpt

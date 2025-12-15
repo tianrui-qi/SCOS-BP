@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - /experiment/a/base@_here_
+  - _self_
+
+name: a/02
+
+objective:
+  freeze_embedding: true
+  freeze_transformer: 3
+  task:
+    stepContrastive: 0.2
+    stepReconstruction: 0.8
+    stepRegressionSingle: 1e-5  # deprecated
+
+trainer:
+  max_epochs: 2860
+  ckpt_load_path: ckpt/a/01/last.ckpt
+  resume: true

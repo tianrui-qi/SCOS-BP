@@ -1,0 +1,28 @@
+objective:
+  # model
+  freeze_embedding: false
+  freeze_transformer: 0
+  freeze_head: false  # exclude adapter
+  # step
+  task:
+    stepContrastive: null
+    stepReconstruction: null
+    stepRegression: null
+    stepRegressionAdapter: null
+  # stepContrastive
+  T: 0.2
+  # stepReconstruction
+  p_point: 0.2
+  p_span_small: [0.0, 0.5]  # channel = 1
+  p_span_large: [0.0, 1.0]  # channel > 1
+  p_hide: 0.9
+  p_keep: 0.1
+  # stepRegressionAdapter
+  K: 50
+  weight_shape: 0.2
+  weight_min: 0.4
+  weight_max: 0.4
+  # optimizer
+  lr: 0.005
+  step_size: 30
+  gamma: 0.98

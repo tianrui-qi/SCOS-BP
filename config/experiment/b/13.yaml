@@ -1,0 +1,25 @@
+# @package _global_
+
+defaults:
+  - /experiment/b/base@_here_
+  - _self_
+
+name: b/13-${hydra:job.num}
+
+data:
+  split_type: SubjectDependent
+
+objective:
+  freeze_embedding: true
+  task:
+    stepRegression: 1.0
+
+trainer:
+  max_epochs: 425
+  ckpt_load_path: ckpt/b/10/last.ckpt
+
+hydra:
+  mode: MULTIRUN
+  sweeper:
+    params: 
+      objective.freeze_transformer: 0,1,2,3,4

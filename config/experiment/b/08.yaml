@@ -1,0 +1,22 @@
+# @package _global_
+
+defaults:
+  - /experiment/b/base@_here_
+  - _self_
+
+name: b/08
+
+data:
+  split_type: SubjectDependent
+  batch_size: 1024
+
+objective:
+  freeze_embedding: true
+  freeze_transformer: 3
+  task:
+    stepRegressionSingle: 1.0 # deprecated
+  lr: 0.001
+
+trainer:
+  max_epochs: 3205
+  ckpt_load_path: ckpt/b/07/last.ckpt

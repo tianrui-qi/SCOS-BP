@@ -1,0 +1,10 @@
+# @package _global_
+
+defaults:
+  - /experiment/d/base@_here_
+  - _self_
+
+name: d/03
+
+objective:
+  p_span_large: [0.5, 1.0]

@@ -1,5 +1,5 @@
-from .module import Module
+from .datamodule import DataModule
 
 __all__ = [
-    "Module",
+    "DataModule",
 ]

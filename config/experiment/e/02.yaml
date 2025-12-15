@@ -1,0 +1,19 @@
+# @package _global_
+
+defaults:
+  - /experiment/e/base-t@_here_
+  - _self_
+
+name: e/02
+
+data:
+  channel_drop: 0.4
+
+objective:
+  task:
+    stepReconstruction: 1.0
+  p_span_small: [0.0, 0.2]  # channel = 1
+  p_span_large: [0.2, 0.4]  # channel > 1
+
+trainer:
+  max_epochs: 8208

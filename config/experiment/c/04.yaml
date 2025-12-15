@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - /experiment/c/base-h@_here_
+  - _self_
+
+name: c/04
+
+model:
+  S: 100
+  stride: 75
+
+trainer:
+  max_epochs: 7000
+  ckpt_load_path: ckpt/c/02/last.ckpt

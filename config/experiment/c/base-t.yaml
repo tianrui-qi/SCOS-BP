@@ -1,0 +1,14 @@
+defaults:
+  - /config@_here_
+  - _self_
+
+data:
+  y_as_y: false
+  data_load_path: data/wave2value.mat
+  split_type: SubjectDependent
+  channel_perm: true
+  channel_drop: 1.0
+
+objective:
+  task:
+    stepReconstruction: 1.0

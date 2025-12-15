@@ -1,0 +1,17 @@
+# @package _global_
+
+defaults:
+  - /experiment/b/base@_here_
+  - _self_
+
+name: b/01
+
+objective:
+  task:
+    stepContrastive: 0.2
+    stepReconstruction: 0.8
+    stepRegressionSingle: 0.0 # deprecated
+  lr: 0.001
+
+trainer:
+  max_epochs: 4240

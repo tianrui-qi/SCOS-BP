@@ -1,0 +1,15 @@
+name: scos-bp
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - hydra-core=1.3
+  - lightning=2.5
+  - tensorboard
+  - pandas
+  - scipy
+  - umap-learn
+  - jupyter
+  - plotly
+  - matplotlib
+  - anywidget
