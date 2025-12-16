@@ -1,14 +1,14 @@
 data:
   # data
-  data_load_path: data/wave2wave.mat
+  data_load_fold: data/raw/
   y_as_y: false
   y_as_x: false
   # normalization
-  mu: 115.0 # set to null if want per-subject mu
-  sd: 20.0  # set to null if want per-subject sd
+  mu: 115.0 # set to null if want per-measurement mu
+  sd: 20.0  # set to null if want per-measurement sd
   # split
-  # choices: SubjectDependent, SubjectIndependent, null
-  split_type: SubjectIndependent  
+  # choices: MeasurementDependent, MeasurementIndependent, null
+  split_type: MeasurementIndependent  
   split_ratio: [0.5, 0.2, 0.3]
   # filter
   # choices: X|Y, X, Y, X&Y, All, null

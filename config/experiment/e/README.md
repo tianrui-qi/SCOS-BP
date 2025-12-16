@@ -11,7 +11,8 @@ Make the pretrain task easier to make this pretriain more universal.
 
 **[`e/02`](02.yaml)**
 
-We finetune on regression on BP waveform without per-subject normalization.
-This regression head surve as a global regression head for all subjects.
+We finetune on regression on BP waveform without per-measurement 
+normalization. This regression head surve as a global regression head for all 
+measurements.
 
 **[`e/03`](03.yaml)**

@@ -7,7 +7,7 @@ defaults:
 name: b/14-${hydra:job.num}
 
 data:
-  split_type: SubjectDependent
+  split_type: MeasurementDependent
 
 objective:
   freeze_embedding: true

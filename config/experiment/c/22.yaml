@@ -7,7 +7,7 @@ defaults:
 name: c/22
 
 data:
-  split_type: SubjectIndependent
+  split_type: MeasurementIndependent
 
 model:
   S: 100

@@ -7,7 +7,7 @@ defaults:
 name: b/17
 
 data:
-  split_type: SubjectDependent
+  split_type: MeasurementDependent
 
 objective:
   task:

@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 data:
-  data_load_path: data/wave2value.mat
+  data_load_fold: data/wave2value/  # deprecated
   y_as_y: true
   split_type: split # deprecated
   channel_perm: true

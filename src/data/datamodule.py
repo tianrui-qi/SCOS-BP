@@ -1,9 +1,9 @@
+import os
 from typing import Literal, Final
 
 import lightning
 import numpy as np
 import pandas as pd
-import scipy.io
 import torch
 
 from .dataset import DataSet
@@ -13,7 +13,7 @@ class DataModule(lightning.LightningDataModule):
     def __init__(
         self,
         # data
-        data_load_path: str, 
+        data_load_fold: str, 
         y_as_y: bool = True, 
         y_as_x: bool = False,
         # normalize
@@ -21,7 +21,7 @@ class DataModule(lightning.LightningDataModule):
         sd: float | None = 20.0,
         # split
         split_type: Literal[
-            "SubjectDependent", "SubjectIndependent"
+            "MeasurementDependent", "MeasurementIndependent"
         ] | None = None,
         split_ratio: tuple[float, float, float] = (0.5, 0.2, 0.3),
         # filter
@@ -34,7 +34,7 @@ class DataModule(lightning.LightningDataModule):
         batch_size: int = 1, num_workers: int = 0,
     ) -> None:
         super().__init__()
-        self._data_load_path: Final = data_load_path
+        self._data_load_fold: Final = data_load_fold
         self._y_as_y: Final = y_as_y
         self._y_as_x: Final = y_as_x
         self._mu: Final = mu
@@ -44,7 +44,7 @@ class DataModule(lightning.LightningDataModule):
         self._filter_level: Final = filter_level
 
         # data
-        self.data_load_path: str
+        self.data_load_fold: str
         self.y_as_y: bool
         self.y_as_x: bool
         self.x: torch.Tensor        # (N, C, T), float32
@@ -55,7 +55,7 @@ class DataModule(lightning.LightningDataModule):
         self.sd: float | dict[str, float]
         # split
         self.split_type: Literal[
-            "SubjectDependent", "SubjectIndependent"
+            "MeasurementDependent", "MeasurementIndependent"
         ] | None
         self.split_ratio: tuple[float, float, float] | None
         # filter
@@ -73,7 +73,7 @@ class DataModule(lightning.LightningDataModule):
 
     def setup(self, stage: str | None = None) -> None:
         # load
-        self.load_(self._data_load_path, self._y_as_y, self._y_as_x)
+        self.load_(self._data_load_fold, self._y_as_y, self._y_as_x)
         # normalize
         if self._y_as_y: self.normalize_(self._mu, self._sd)
         # split (https://arxiv.org/pdf/2410.03057)
@@ -88,41 +88,23 @@ class DataModule(lightning.LightningDataModule):
         self.filter_(self._filter_level)
 
     def load_(
-        self, data_load_path: str, y_as_y: bool = True, y_as_x: bool = False
+        self, data_load_fold: str, y_as_y: bool = True, y_as_x: bool = False
     ) -> None:
-        # TODO: move load .mat out of /src
-        # load .mat
-        data = scipy.io.loadmat(data_load_path)["data_store"][0, 0]
-        # x, (N, C, T)
-        self.x = torch.tensor(data[0]).to(torch.float).transpose(-1, -2)
-        # y, (N, ...)
-        if y_as_y: 
-            self.y = torch.tensor(data[1]).to(torch.float)
+        self.profile = pd.read_csv(
+            os.path.join(data_load_fold, "profile.csv")
+        )
+        self.x = torch.tensor(np.load(      # (N, C, T)
+            os.path.join(data_load_fold, "x.npy")
+        )).to(torch.float)
+        if y_as_y:
+            self.y = torch.tensor(np.load(  # (N, ...)
+                os.path.join(data_load_fold, "y.npy")
+            )).to(torch.float)
         # append y to last channel of x
         if y_as_y and y_as_x: 
             self.x = torch.cat([self.x, self.y.unsqueeze(1)], dim=1)
-        # profile, metadata of each sample
-        def scalarize(arr, dtype=None):
-            out = [
-                np.asarray(x).ravel()[0] 
-                if np.asarray(x).size else np.nan for x in arr
-            ]
-            if dtype is None: return np.array(out)
-            else: return np.array(out, dtype=dtype)
-        self.profile = pd.DataFrame({
-            'id'        : scalarize(data[2], dtype=str).flatten(),
-            'group'     : scalarize(data[3], dtype=str).flatten(),
-            'repeat'    : scalarize(data[4], dtype=bool).flatten(),
-            'condition' : scalarize(data[5], dtype=int).flatten()
-        })
-        self.profile = self.profile.rename(columns={"id": "subject"})
-        self.profile["health"] = self.profile["group"] != "hypertensive"
-        self.profile["system"] = self.profile["group"] != "original"
-        self.profile = self.profile[
-            ['subject', 'health', 'system', 'repeat', 'condition']
-        ]
         # update data to current setting
-        self.data_load_path = data_load_path
+        self.data_load_fold = data_load_fold
         self.y_as_y = y_as_y
         self.y_as_x = y_as_x
         # update normalize to reflect current setting
@@ -150,20 +132,20 @@ class DataModule(lightning.LightningDataModule):
 
         mu_dict = {}
         sd_dict = {}
-        for s, profile_s in self.profile.groupby('subject'):
-            idx_s = profile_s.index.to_numpy()
-            # a subject's mu and sd
-            mu_s = torch.nanmean(self.y[idx_s]).item()
-            mu2_s = torch.nanmean(self.y[idx_s] * self.y[idx_s])
-            sd_s = torch.sqrt(mu2_s - mu_s * mu_s).item()
+        for m, profile_m in self.profile.groupby('measurement'):
+            idx_m = profile_m.index.to_numpy()
+            # a measurement's mu and sd
+            mu_m = torch.nanmean(self.y[idx_m]).item()
+            mu2_m = torch.nanmean(self.y[idx_m] * self.y[idx_m])
+            sd_m = torch.sqrt(mu2_m - mu_m * mu_m).item()
             # use global mu or sd instead if given
-            if mu is not None: mu_s = mu
-            if sd is not None: sd_s = sd
+            if mu is not None: mu_m = mu
+            if sd is not None: sd_m = sd
             # apply
-            self.y[idx_s] = (self.y[idx_s] - mu_s) / sd_s
+            self.y[idx_m] = (self.y[idx_m] - mu_m) / sd_m
             # store
-            mu_dict[s] = mu_s
-            sd_dict[s] = sd_s
+            mu_dict[m] = mu_m
+            sd_dict[m] = sd_m
         if self.y_as_x: self.x[:, -1, :] = self.y
         
         # update normalize paras
@@ -194,32 +176,32 @@ class DataModule(lightning.LightningDataModule):
         if isinstance(self.sd, float):
             y = y * self.sd
         else:
-            for s, profile_s in self.profile.groupby('subject'):
-                idx_s = profile_s.index.to_numpy()
-                y[idx_s] = y[idx_s] * self.sd[s]    # type: ignore
+            for m, profile_m in self.profile.groupby('measurement'):
+                idx_m = profile_m.index.to_numpy()
+                y[idx_m] = y[idx_m] * self.sd[m]    # type: ignore
         # mu
         if isinstance(self.mu, float):
             y = y + self.mu
         else:
-            for s, profile_s in self.profile.groupby('subject'):
-                idx_s = profile_s.index.to_numpy()
-                y[idx_s] = y[idx_s] + self.mu[s]    # type: ignore
+            for m, profile_m in self.profile.groupby('measurement'):
+                idx_m = profile_m.index.to_numpy()
+                y[idx_m] = y[idx_m] + self.mu[m]    # type: ignore
         return y
 
-    def splitSubjectDependent_(
+    def splitMeasurementDependent_(
         self,
         ratio: tuple[float, float, float] = (0.5, 0.2, 0.3),
         verbose: bool = False, seed: int = 42,
     ) -> None:
         """
-        per each subject and each condition:
+        per each measurement and each condition:
         -   split all samples of that condition across splits according to 
             ratio
         -   ensure each condition appears in as many splits as possible
             (ideally all three if enough samples exist)
         -   we ignore 'health', 'system', and 'repeat' here
         """
-        name = self.splitSubjectDependent_.__name__
+        name = self.splitMeasurementDependent_.__name__
         rng = np.random.default_rng(seed)
         k = 3
         weight = np.asarray(ratio, dtype=float)
@@ -231,10 +213,10 @@ class DataModule(lightning.LightningDataModule):
             df_sample.drop(columns=[name], inplace=True)
         df_sample[name] = -1
 
-        # Group samples by (subject, condition)
-        grouped = df_sample.groupby(["subject", "condition"], sort=False)
+        # Group samples by (measurement, condition)
+        grouped = df_sample.groupby(["measurement", "condition"], sort=False)
 
-        for (subject, cond), idx_frame in grouped:
+        for (measurement, cond), idx_frame in grouped:
             idx = idx_frame.index.to_numpy()
             n = len(idx)
             if n == 0:
@@ -301,58 +283,60 @@ class DataModule(lightning.LightningDataModule):
         if verbose: print(f"{name}: (train, valid, test) = {length}")
 
         self.profile["split"] = split
-        self.split_type = "SubjectDependent"
+        self.split_type = "MeasurementDependent"
         self.split_ratio = ratio
 
-    def splitSubjectIndependent_(
+    def splitMeasurementIndependent_(
         self,
         ratio: tuple[float, float, float] = (0.5, 0.2, 0.3),
         verbose: bool = False, seed: int = 42, 
         iters: int = 2000, 
     ) -> None:
         """
-        assign each subject to train/valid/test (0/1/2) such that:
-        -   each subject appears in exactly one split
+        assign each measurement to train/valid/test (0/1/2) such that:
+        -   each measurement appears in exactly one split
         -   sample count per split matches the given ratio
         -   proportions of health/system/repeat True/False are similar 
             across splits
         """
-        name = self.splitSubjectIndependent_.__name__
+        name = self.splitMeasurementIndependent_.__name__
 
-        profile_subject = pd.DataFrame({
-            'subject': self.profile['subject'].unique(),
+        profile_measurement = pd.DataFrame({
+            'measurement': self.profile['measurement'].unique(),
             'health': [
-                self.profile[self.profile['subject'] == subject]['health']
-                .iloc[0] for subject in self.profile['subject'].unique()
+                self.profile[self.profile['measurement'] == m]['health']
+                .iloc[0] for m in self.profile['measurement'].unique()
             ],
             'system': [
-                self.profile[self.profile['subject'] == subject]['system']
-                .iloc[0] for subject in self.profile['subject'].unique()
+                self.profile[self.profile['measurement'] == m]['system']
+                .iloc[0] for m in self.profile['measurement'].unique()
             ],
             'repeat': [
-                self.profile[self.profile['subject'] == subject]['repeat']
-                .iloc[0] for subject in self.profile['subject'].unique()
+                self.profile[self.profile['measurement'] == m]['repeat']
+                .iloc[0] for m in self.profile['measurement'].unique()
             ],
             'length': [
-                len(self.profile[self.profile['subject'] == subject]) 
-                for subject in self.profile['subject'].unique()
+                len(self.profile[self.profile['measurement'] == m]) 
+                for m in self.profile['measurement'].unique()
             ]
         })
 
         rng = np.random.default_rng(seed)
-        subjects = profile_subject.copy()
-        subjects['group'] = list(zip(
-            subjects['health'], subjects['system'], subjects['repeat']
+        measurements = profile_measurement.copy()
+        measurements['group'] = list(zip(
+            measurements['health'], 
+            measurements['system'], 
+            measurements['repeat']
         ))
-        groups = sorted(subjects['group'].unique())
-        total_weight = subjects['length'].sum()
+        groups = sorted(measurements['group'].unique())
+        total_weight = measurements['length'].sum()
         k = 3
         weight = np.array(ratio, dtype=float)
         weight = weight / weight.sum()
         target_total = weight * total_weight
 
         # overall group totals
-        group_totals = subjects.groupby('group')['length'].sum().to_dict()
+        group_totals = measurements.groupby('group')['length'].sum().to_dict()
         # target per split per group
         target_group = {g: weight * group_totals[g] for g in groups}
 
@@ -360,7 +344,7 @@ class DataModule(lightning.LightningDataModule):
         best_score = np.inf
 
         # precompute items
-        items = subjects[['subject','group','length']].to_numpy()
+        items = measurements[['measurement','group','length']].to_numpy()
 
         def score(split_totals, split_group_totals):
             # squared error on totals + group totals
@@ -376,14 +360,14 @@ class DataModule(lightning.LightningDataModule):
             # sometimes sort by descending weight then shuffle small noise
             if rng.random() < 0.5:
                 order = order[np.argsort(
-                    -subjects['length'].to_numpy()[order] + \
+                    -measurements['length'].to_numpy()[order] + \
                     rng.normal(0, 1e-6, size=len(order))
                 )]
             split_totals = np.zeros(k, dtype=float)
             split_group_totals = {g: np.zeros(k, dtype=float) for g in groups}
             assign = np.full(len(items), -1, dtype=int)
             for idx in order:
-                subj, g, w = items[idx]
+                _, g, w = items[idx]
                 # evaluate marginal cost of placing in each split
                 costs = []
                 for s in range(k):
@@ -414,20 +398,20 @@ class DataModule(lightning.LightningDataModule):
                 best_score = sc
                 best_assign = assign.copy()
 
-        # map items index to subject->split
+        # map items index to measurement->split
         idx_to_subj = {i: items[i][0] for i in range(len(items))}
         mapping = {
             idx_to_subj[i]: int(best_assign[i])     # type: ignore
             for i in range(len(best_assign))        # type: ignore
         }
-        split = self.profile['subject'].map(mapping).to_numpy()
+        split = self.profile['measurement'].map(mapping).to_numpy()
 
         # print number of samples per split
         length = tuple([int((split == s).sum()) for s in range(3)])
         if verbose: print(f"{name}: (train, valid, test) = {length}")
 
         self.profile["split"] = split
-        self.split_type = "SubjectIndependent"
+        self.split_type = "MeasurementIndependent"
         self.split_ratio = ratio
 
     def filter_(
@@ -490,9 +474,9 @@ class DataModule(lightning.LightningDataModule):
         #   criteria
 
     def train_dataloader(
-        self, subject: str | None = None
+        self, measurement: str | None = None, shuffle: bool = True,
     ) -> torch.utils.data.DataLoader:
-        if subject is None:
+        if measurement is None:
             x = self.x[(
                 self.profile["split"] == 0
             ).to_numpy()]
@@ -501,11 +485,11 @@ class DataModule(lightning.LightningDataModule):
             ).to_numpy()] if self.y_as_y else None
         else:
             x = self.x[(
-                (self.profile["subject"] == subject) &
+                (self.profile["measurement"] == measurement) &
                 (self.profile["condition"] == 1)
             ).to_numpy()]
             y = self.y[(
-                (self.profile["subject"] == subject) &
+                (self.profile["measurement"] == measurement) &
                 (self.profile["condition"] == 1)
             ).to_numpy()] if self.y_as_y else None
         dataset = DataSet(
@@ -515,7 +499,7 @@ class DataModule(lightning.LightningDataModule):
             channel_shift=self.channel_shift,
         )
         dataloader = torch.utils.data.DataLoader(
-            dataset, shuffle=True, 
+            dataset, shuffle=shuffle, 
             batch_size=self.batch_size, num_workers=self.num_workers, 
             pin_memory=self.pin_memory,
             persistent_workers=self.persistent_workers
@@ -523,9 +507,9 @@ class DataModule(lightning.LightningDataModule):
         return dataloader
 
     def val_dataloader(
-        self, subject: str | None = None
+        self, measurement: str | None = None
     ) -> torch.utils.data.DataLoader:
-        if subject is None:
+        if measurement is None:
             x = self.x[(
                 self.profile["split"] == 1
             ).to_numpy()]
@@ -534,11 +518,11 @@ class DataModule(lightning.LightningDataModule):
             ).to_numpy()] if self.y_as_y else None
         else:
             x = self.x[(
-                (self.profile["subject"] == subject) &
+                (self.profile["measurement"] == measurement) &
                 (self.profile["condition"] != 1)
             ).to_numpy()]
             y = self.y[(
-                (self.profile["subject"] == subject) &
+                (self.profile["measurement"] == measurement) &
                 (self.profile["condition"] != 1)
             ).to_numpy()] if self.y_as_y else None
         dataset = DataSet(x, y)
@@ -551,17 +535,17 @@ class DataModule(lightning.LightningDataModule):
         return dataloader
 
     def test_dataloader(
-        self, subject: str | None = None
+        self, measurement: str | None = None
     ) -> torch.utils.data.DataLoader:
-        if subject is None:
+        if measurement is None:
             x = self.x
             y = self.y if self.y_as_y else None
         else:
             x = self.x[(
-                (self.profile["subject"] == subject)
+                (self.profile["measurement"] == measurement)
             ).to_numpy()]
             y = self.y[(
-                (self.profile["subject"] == subject)
+                (self.profile["measurement"] == measurement)
             ).to_numpy()] if self.y_as_y else None
         dataset = DataSet(x, y)
         dataloader = torch.utils.data.DataLoader(

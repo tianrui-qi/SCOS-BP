@@ -7,7 +7,7 @@ defaults:
 name: d/02
 
 data:
-  split_type: SubjectDependent
+  split_type: MeasurementDependent
   channel_perm: true
   channel_drop: 1.0
 

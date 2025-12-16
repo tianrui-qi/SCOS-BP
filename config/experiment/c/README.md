@@ -56,12 +56,12 @@ S=400, stride=200
 **[c/19](19.yaml)**
 
 Now we use the best configurations we have and train again on data split
-where train and valid's subject are joint. 
+where train and valid's measurement are joint. 
 
 **[c/20](20.yaml)**
 **[c/21](21.yaml)**
 
-What if we only pretrain with joint subjects and finetune with disjoint
-subjects?
+What if we only pretrain with joint measurements and finetune with disjoint
+measurements?
 
 **[c/22](22.yaml)**

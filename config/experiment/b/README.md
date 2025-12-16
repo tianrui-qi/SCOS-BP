@@ -21,8 +21,8 @@ Now, we finetune with regression task.
 
 Since previous bias split not good enough, we not sure if this bad 
 performance is because of model or becuase of data. So, now with split02,
-each subject's samples appear in both train and valid set. There is no bias
-in data split. We expect the model's train and valid loss of regression
+each measurement's samples appear in both train and valid set. There is no 
+bias in data split. We expect the model's train and valid loss of regression
 perform similarly. To do so, we first pretrain the model with only
 reconstruction task. We do not use contrastive task to reduce complexity
 and control variables.

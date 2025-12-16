@@ -4,8 +4,8 @@ defaults:
 
 data:
   y_as_y: false
-  data_load_path: data/wave2value.mat
-  split_type: SubjectDependent
+  data_load_fold: data/wave2value/  # deprecated
+  split_type: MeasurementDependent
   channel_perm: true
   channel_drop: 1.0
 
