@@ -27,7 +27,8 @@ class Trainer:
             save_dir=log_save_fold, name="", version="",
         )
         checkpoint = lightning.pytorch.callbacks.ModelCheckpoint(
-            dirpath=ckpt_save_fold, filename="{epoch:04d}", 
+            dirpath=ckpt_save_fold, filename="epoch{epoch:04d}", 
+            auto_insert_metric_name=False,
             every_n_epochs=every_n_epochs, save_top_k=-1, save_last=True,
         )
         lrmonitor = lightning.pytorch.callbacks.LearningRateMonitor(
@@ -55,7 +56,7 @@ class Trainer:
     def ckptFinder(
         ckpt_load_fold: str, epoch: int | None = None
     ) -> str:
-        target = "last" if epoch is None else f"epoch={epoch:04d}"
+        target = "last" if epoch is None else f"epoch{epoch:04d}"
         for f in os.listdir(ckpt_load_fold):
             if target in f and f.endswith(".ckpt"):
                 ckpt_load_fold = os.path.join(ckpt_load_fold, f)

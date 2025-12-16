@@ -17,4 +17,4 @@ objective:
 
 trainer:
   max_epochs: 2105
-  ckpt_load_path: ckpt/b/01/epoch=1162-step=46520.ckpt
+  ckpt_load_path: ckpt/b/01/epoch1162.ckpt

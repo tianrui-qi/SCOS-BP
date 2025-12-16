@@ -1,8 +1,6 @@
 import hydra
 import omegaconf
-import warnings
 
-import lightning
 import torch
 
 import matplotlib.pyplot as plt
@@ -10,15 +8,9 @@ import matplotlib.pyplot as plt
 import src
 
 
-torch.set_float32_matmul_precision("medium")
-lightning.seed_everything(42, workers=True, verbose=False)
-# disable MPS UserWarning: The operator 'aten::col2im' is not currently 
-# supported on the MPS backend
-warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
-
-
 @hydra.main(
-    version_base=None, config_path="../config", config_name="pipeline/sanity"
+    version_base=None, config_path="../config", 
+    config_name="pipeline/sanity"
 )
 def main(cfg: omegaconf.DictConfig) -> None:
     # device

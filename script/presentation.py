@@ -1,40 +1,27 @@
-# TODO: clean up!!
-
 # %% # setup
 """ setup """
 
 import os
 import logging
-import warnings
 import hydra
 
 import lightning
 import numpy as np
-import sklearn.decomposition
 import torch
-import umap
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 import src
 
-torch.set_float32_matmul_precision("medium")
 lightning.seed_everything(42, workers=True, verbose=False)
-# disable MPS UserWarning: The operator 'aten::col2im' is not currently 
-# supported on the MPS backend
-warnings.filterwarnings("ignore", message=".*MPS.*fallback.*")
 # disable matplotlib findfont warnings
 logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
 
-# device
-if torch.cuda.is_available(): device = "cuda"
-elif torch.backends.mps.is_available(): device = "mps"
-else: device = "cpu"
-
 # config
 with hydra.initialize(version_base=None, config_path="config"):
-    cfg = hydra.compose(config_name="config")
+    cfg = hydra.compose(config_name="pipeline/pretrain-h")
+
 
 # %% # Data: Preparation
 """ Data: Preparation """
@@ -257,7 +244,7 @@ def saveSample(
     print(f"saved: {filename}")
 
 # data
-data = src.data.DataModule(**cfg.data)
+data = src.DataModule(**cfg.data)
 data.setup()
 data.denormalize_()
 
@@ -283,7 +270,7 @@ saveSample(
 """ Data: Profile """
 
 # data
-data = src.data.DataModule(**cfg.data)
+data = src.DataModule(**cfg.data)
 data.setup()
 
 # ============================================================
@@ -320,10 +307,9 @@ profile["complete"] = complete
 #    e.g. H001, H001_R -> person = H001, is_repeat True/False
 # ============================================================
 
-profile["person"]    = profile["subject"].str.replace("_R", "", regex=False)
-profile["is_repeat"] = profile["subject"].str.endswith("_R")
+profile["is_repeat"] = profile["measurement"].str.endswith("_R")
 
-persons    = sorted(profile["person"].unique())
+persons    = sorted(profile["subject"].unique())
 conditions = sorted(profile["condition"].unique())
 
 num_person = len(persons)
@@ -336,7 +322,7 @@ usable_repeat   = np.zeros((num_person, num_cond), dtype=int)
 complete_repeat = np.zeros((num_person, num_cond), dtype=int)
 
 for i, p in enumerate(persons):
-    mask_person   = (profile["person"] == p)
+    mask_person   = (profile["subject"] == p)
     mask_first    = mask_person & (~profile["is_repeat"])
     mask_repeat   = mask_person & ( profile["is_repeat"])
 
@@ -566,6 +552,7 @@ ax_right.bar(
 
 # === Add extra y-ticks at usable & complete totals ===
 ax_right.set_yticks([total_complete_all, total_usable_all])
+ax_right.margins(y=0)
 
 # --- Spine styles ---
 ax_right.spines["top"].set_visible(False)
@@ -583,6 +570,7 @@ ax_right.tick_params(
 
 plt.tight_layout()
 print("saved: data/presentation/DataProfile.png")
+os.makedirs("data/presentation", exist_ok=True)
 plt.savefig(
     "data/presentation/DataProfile.png",
     format="png",
@@ -590,7 +578,7 @@ plt.savefig(
     bbox_inches="tight",
     transparent=True,
 )
-# plt.show()
+plt.show()
 plt.close(fig)
 
 
@@ -677,7 +665,7 @@ def save_tokens_and_grid(
     print(f"saved: {out_dir}/{{ch}}_token{{l}}.svg ({C*L} files)")
 
 # data
-data = src.data.DataModule(**cfg.data)
+data = src.DataModule(**cfg.data)
 data.setup()
 # model
 model = src.model.Model(**cfg.model)
@@ -703,10 +691,6 @@ save_tokens_and_grid(
 
 # %% # Data: Stage 1 & 2 Split
 """ Data: Stage 1 & 2 Split """
-
-# data
-data = src.data.DataModule(**cfg.data)
-data.setup()
 
 # ============================================================
 # 1. Per-sample availability
@@ -742,10 +726,9 @@ profile["complete"] = complete
 #    e.g. H001, H001_R -> person = H001, is_repeat True/False
 # ============================================================
 
-profile["person"]    = profile["subject"].str.replace("_R", "", regex=False)
-profile["is_repeat"] = profile["subject"].str.endswith("_R")
+profile["is_repeat"] = profile["measurement"].str.endswith("_R")
 
-persons    = sorted(profile["person"].unique())
+persons    = sorted(profile["subject"].unique())
 conditions = sorted(profile["condition"].unique())
 
 num_person = len(persons)
@@ -758,7 +741,7 @@ usable_repeat   = np.zeros((num_person, num_cond), dtype=int)
 complete_repeat = np.zeros((num_person, num_cond), dtype=int)
 
 for i, p in enumerate(persons):
-    mask_person   = (profile["person"] == p)
+    mask_person   = (profile["subject"] == p)
     mask_first    = mask_person & (~profile["is_repeat"])
     mask_repeat   = mask_person & ( profile["is_repeat"])
 
@@ -776,21 +759,27 @@ for i, p in enumerate(persons):
             m_repeat_cond, "complete"].sum()    # type: ignore
 
 # ============================================================
-# 2.5 Per-person split (train/test)
+# 2.5 Per-measurement split (train/test), separately for first/repeat
 #      split = 0 -> train
 #      split = 1 or 2 -> test
-#      All subjects of the same person (including _R) share the same split
 # ============================================================
 
-person_split = np.zeros(num_person, dtype=int)   # 0: train, 1/2: test
-for i, p in enumerate(persons):
-    splits = profile.loc[
-        profile["person"] == p, "split"
-    ].unique()  # type: ignore
-    person_split[i] = int(splits[0])
+# For each person, define the measurement ids
+first_meas  = np.array([p for p in persons])          # e.g. H001
+repeat_meas = np.array([f"{p}_R" for p in persons])   # e.g. H001_R
 
-is_train_person = (person_split == 0)
-is_test_person  = ~is_train_person
+def meas_split(m_id: str) -> int:
+    s = profile.loc[profile["measurement"] == m_id, "split"].unique()
+    return int(s[0]) if len(s) else -1   # -1 if missing
+
+split_first  = np.array([meas_split(m) for m in first_meas], dtype=int)
+split_repeat = np.array([meas_split(m) for m in repeat_meas], dtype=int)
+
+is_train_first_person  = (split_first == 0)
+is_test_first_person   = np.isin(split_first,  [1, 2])
+
+is_train_repeat_person = (split_repeat == 0)
+is_test_repeat_person  = np.isin(split_repeat, [1, 2])
 
 # train / test color
 train_color = "#1f77b4"
@@ -928,7 +917,7 @@ for j in range(num_cond):
     )
     ax_top.bar(
         x_pos,
-        usable_cond * is_train_person,
+        usable_cond * is_train_first_person,
         bottom=bottom,
         color=train_color,
         edgecolor="none",
@@ -937,7 +926,7 @@ for j in range(num_cond):
         alpha=0.85,
     )
 
-    complete_facecolors = np.where(is_train_person, train_color, test_color)
+    complete_facecolors = np.where(is_train_first_person, train_color, test_color)
 
     ax_top.bar(
         x_pos,
@@ -1007,7 +996,7 @@ for j in range(num_cond):
     )
     ax_bottom.bar(
         x_pos,
-        usable_cond * is_train_person,
+        usable_cond * is_train_repeat_person,
         bottom=bottom,
         color=train_color,
         edgecolor="none",
@@ -1015,7 +1004,7 @@ for j in range(num_cond):
         linewidth=0,
         alpha=0.85,
     )
-    complete_facecolors = np.where(is_train_person, train_color, test_color)
+    complete_facecolors = np.where(is_train_repeat_person, train_color, test_color)
     ax_bottom.bar(
         x_pos,
         complete_cond,
@@ -1190,6 +1179,7 @@ ax_right.tick_params(
 
 plt.tight_layout()
 print("saved: data/presentation/DataSplit.png")
+os.makedirs("data/presentation", exist_ok=True)
 plt.savefig(
     "data/presentation/DataSplit.png",
     format="png",
@@ -1197,116 +1187,8 @@ plt.savefig(
     bbox_inches="tight",
     transparent=True,
 )
-# plt.show()
+plt.show()
 plt.close(fig)
-
-
-# %% # Result: Stage 1 & 2
-""" Result: Stage 1 & 2 """
-
-# config
-cfg.data.filter_level = "All"
-# data
-data = src.data.DataModule(**cfg.data)
-data.setup()
-
-profile = data.profile.copy()
-
-# 1. Blood Pressure
-bp_np = data.y.detach().cpu().numpy()   # (N, T)
-profile["diastole"] = bp_np.min(axis=1)
-profile["systole"]  = bp_np.max(axis=1)
-# per-subject min-max normalization
-_d_min = profile.groupby("subject")["diastole"].transform("min")
-_d_max = profile.groupby("subject")["diastole"].transform("max")
-_d_denom = (_d_max - _d_min).replace(0, np.finfo(float).eps)
-profile["diastole"] = (profile["diastole"] - _d_min) / _d_denom
-_s_min = profile.groupby("subject")["systole"].transform("min")
-_s_max = profile.groupby("subject")["systole"].transform("max")
-_s_denom = (_s_max - _s_min).replace(0, np.finfo(float).eps)
-profile["systole"]  = (profile["systole"]  - _s_min) / _s_denom
-
-# 2. Sample Index T within Subject
-# for example, S001: 0,1,2,...; S002: 0,1,2,...; ...
-profile["T"] = profile.groupby("subject").cumcount().astype(int)
-
-# 3. Representation of Stage 1
-# model
-model = src.model.Model(**cfg.model)
-src.trainer.Trainer.ckptLoader_(
-    model, "ckpt/PretrainT/epoch=3885-step=248704.ckpt"
-).to(device)
-model.freeze()
-model.eval()
-# representation
-temp = []
-for batch in data.test_dataloader():
-    batch = [b.to(device) for b in batch]
-    with torch.no_grad(): temp.append(model.forward(batch[0], batch[1]))
-representation = torch.cat(temp, dim=0).detach().cpu().numpy()  # (N, D)
-# UMAP
-u = umap.UMAP(n_jobs=1, random_state=42)
-u_2 = u.fit_transform(representation)       # (N, 2)
-u_2 -= u_2.mean(axis=0)     # type: ignore
-u_2 /= u_2.std(axis=0)      # type: ignore
-# PCA
-pca = sklearn.decomposition.PCA(n_components=6, random_state=42)
-pca_6 = pca.fit_transform(representation)  # (N, 6)
-# print("\texplained variance ratio: " + ", ".join(
-#     f"{v:.2f}%" for v in pca.explained_variance_ratio_ * 100
-# ))
-# print(f"\ttotal: {(pca.explained_variance_ratio_ * 100).sum():.2f}%")
-# save UMAP and PCA coordinate to profile
-profile[["S1_UMAP1", "S1_UMAP2"]] = u_2
-for i in range(pca_6.shape[1]): profile[f"S1_PC{i+1}"] = pca_6[:, i]
-
-# 4. Representation of Stage 2
-# model
-model = src.model.Model(**cfg.model)
-src.trainer.Trainer.ckptLoader_(
-    model, "ckpt/PretrainH/last.ckpt"
-).to(device)
-model.freeze()
-model.eval()
-# representation
-temp = []
-for batch in data.test_dataloader():
-    batch = [b.to(device) for b in batch]
-    with torch.no_grad(): temp.append(model.forward(batch[0], batch[1]))
-representation = torch.cat(temp, dim=0).detach().cpu().numpy()  # (N, D)
-# UMAP
-u = umap.UMAP(n_jobs=1, random_state=42)
-u_2 = u.fit_transform(representation)       # (N, 2)
-u_2 -= u_2.mean(axis=0)     # type: ignore
-u_2 /= u_2.std(axis=0)      # type: ignore
-# PCA
-pca = sklearn.decomposition.PCA(n_components=6, random_state=42)
-pca_6 = pca.fit_transform(representation)  # (N, 6)
-# print("\texplained variance ratio: " + ", ".join(
-#     f"{v:.2f}%" for v in pca.explained_variance_ratio_ * 100
-# ))
-# print(f"\ttotal: {(pca.explained_variance_ratio_ * 100).sum():.2f}%")
-# save UMAP and PCA coordinate to profile
-profile[["S2_UMAP1", "S2_UMAP2"]] = u_2
-for i in range(pca_6.shape[1]): profile[f"S2_PC{i+1}"] = pca_6[:, i]
-
-# store profile, x, y in data/presentation/Result
-os.makedirs("data/presentation/ResultPretrain", exist_ok=True)
-profile.to_csv(
-    "data/presentation/ResultPretrain/profile.csv",
-    index=False,
-)
-np.save(
-    "data/presentation/ResultPretrain/x.npy",
-    data.x.detach().cpu().numpy(),
-)
-np.save(
-    "data/presentation/ResultPretrain/y.npy",
-    data.y.detach().cpu().numpy(),
-)
-
-print("Please run the following command to launch result visualization:")
-print("voila app.ipynb")
 
 
 # %%

@@ -1,0 +1,13 @@
+# @package _global_
+
+defaults:
+  - /schema/data@_here_
+  - /schema/model@_here_
+  - _self_
+
+data_save_fold: null
+ckpt_load_path: ???
+
+data:
+  y_as_y: true
+  filter_level: All

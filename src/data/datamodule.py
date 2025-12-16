@@ -76,7 +76,7 @@ class DataModule(lightning.LightningDataModule):
         self.load_(self._data_load_fold, self._y_as_y, self._y_as_x)
         # normalize
         if self._y_as_y: self.normalize_(self._mu, self._sd)
-        # split (https://arxiv.org/pdf/2410.03057)
+        # split
         if self._split_type is not None:
             fn = getattr(self, f"split{self._split_type}_", None)
             if fn is None: raise ValueError

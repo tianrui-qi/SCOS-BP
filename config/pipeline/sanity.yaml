@@ -1,13 +1,13 @@
 # @package _global_
 
 defaults:
-  - /config@_here_
+  - /schema/data@_here_
+  - /schema/model@_here_
+  - /schema/objective@_here_
   - _self_
 
-name: sanity
+step: 1000
 
 data:
   filter_level: All
   batch_size: 32
-
-step: 1000

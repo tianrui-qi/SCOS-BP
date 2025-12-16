@@ -18,4 +18,4 @@ objective:
   lr: 0.0005
 
 trainer:
-  ckpt_load_path: ckpt/e/02/epoch=3885-step=248704.ckpt
+  ckpt_load_path: ckpt/e/02/epoch3885.ckpt
