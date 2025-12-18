@@ -1,0 +1,8 @@
+# This file defines a pip-based environment required for deploying the 
+# Streamlit web app located in `website/app.py` through Streamlit Community 
+# Cloud. For developement environment for this project, please refer to 
+# `environment.yaml`.
+streamlit
+plotly
+pandas
+numpy

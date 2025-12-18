@@ -15,11 +15,8 @@ import torch
 
 import matplotlib.pyplot as plt
 
-
-
 import src
 import config
-import visualization
 
 torch.set_float32_matmul_precision("medium")
 lightning.seed_everything(42, workers=True, verbose=False)
@@ -215,11 +212,6 @@ print("valid: {}\tMAE of (min, max) = ({:5.2f}, {:5.2f})".format(
         ]["(P-T)MaxBP"]
     )),
 ))
-
-# %% # visualization
-
-""" visualization """
-visualization.VisualizationPrediction(result, profile.copy())
 
 
 # %%

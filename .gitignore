@@ -1,4 +1,10 @@
-/data/
+/data/*
+!data/evaluation/
+/data/evaluation/**
+!data/evaluation/pretrain-t/
+!data/evaluation/pretrain-h/
+!data/evaluation/pretrain-t/profile.csv.parquet
+!data/evaluation/pretrain-h/profile.csv.parquet
 
 # temp folder and files
 **/temp/

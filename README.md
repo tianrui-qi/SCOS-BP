@@ -1,14 +1,19 @@
 Please check the project 
 [presentation](https://cdn.jsdelivr.net/gh/tianrui-qi/SCOS-BP@main/asset/presentation.pdf)
-for a quick overview. 
+for a quick overview and web app at 
+[scos-bp.streamlit.app](https://scos-bp.streamlit.app)
+for interactive visualization of results.
 
 ## Installation
 
-This project is built with
+### Environment
+
+This project is built using
 [PyTorch Lightning](https://github.com/Lightning-AI/pytorch-lightning) 
-(`lightning=2.5`) for deep learning model development and 
+(`lightning=2.5`) for deep learning model development, 
 [Hydra](https://github.com/facebookresearch/hydra) (`hydra-core=1.3`) for 
-configuration management. 
+configuration management, and [Plotly](https://plotly.com/) together with
+[Streamlit](https://streamlit.io/) for interactive visualization.
 Familiarity with these frameworks is recommended for further development.
 Python dependencies are managed with
 [Conda](https://docs.conda.io/en/latest/).
@@ -22,6 +27,8 @@ cd SCOS-BP
 conda env create -f environment.yaml
 conda activate scos-bp
 ```
+
+### Data and Pretrained Models
 
 All demonstrations in this README are based on data and pretrained model 
 checkpoints available on [OSF](https://osf.io/yqpht/). 
@@ -39,9 +46,12 @@ If command `rsync` is not available on your system, you may use
 `mv yqpht/osfstorage/* ./` instead but less safe. Make sure understand what
 these commands do before running them.
 
-We provide a sanity-check [script](script/sanity.py) to verify 
-environment and data are correctly set up. This script trains the model on a 
-single fixed batch for few steps using the reconstruction objective. 
+### Sanity Check
+
+We provide a sanity-check script to verify environment and data are correctly 
+set up. 
+This script trains the model on a single fixed batch for few steps using the 
+reconstruction objective. 
 To run the script,
 
 ```bash
@@ -59,8 +69,7 @@ project.
 
 ## Data
 
-For data downloaded from [OSF](https://osf.io/yqpht/) in
-[Installation](#installation), three files are provided under `data/raw/`:
+Three files are provided on [OSF](https://osf.io/yqpht/) under `data/raw/`,
 
 -   `x.npy`
     Optical waveforms (33635 samples × 3 channels × 1000 time points), 
@@ -136,11 +145,8 @@ for exact requirements.
 
 ## Model 
 
-<!-- Add More Details -->
-
-For checkpoints downloaded from [OSF](https://osf.io/yqpht/) in
-[Installation](#installation), two pretrained models are provided under 
-`ckpt/`:
+Two pretrained models checkpoints are provided on [OSF](https://osf.io/yqpht/)
+under `ckpt/`,
 
 -   `pretrain-t/epoch3885.ckpt`
     Model pretrained on unsupervised reconstruction task using optical
@@ -159,25 +165,43 @@ For more details, please refer to implement in
 
 ## Evaluation
 
-After representation learning of transformer encoders, we evaluate learned 
-representations for all samples through low-dimensional visualization. 
-To compute UMAP and PCA coordinates of learned representations on data
-`data/raw/` (default) with given model,
+After representation learning, we compute representations for all samples and
+project them into a low-dimensional space using UMAP and PCA for 
+visualization. 
+We developed an web app at 
+[scos-bp.streamlit.app](https://scos-bp.streamlit.app) 
+using [Plotly](https://plotly.com/) for plotting,
+[Streamlit](https://streamlit.io/) as the frontend framework, and
+[Streamlit Community Cloud](https://streamlit.io/cloud) for deployment.
+You can also run the app locally by
+
+```bash
+streamlit run website/app.py
+```
+
+Results for two pretrained models are provided under 
+[`data/evaluation/`](data/evaluation/).
+By default, the web app will load results from 
+[`pretrain-t/profile.csv.parquet`](data/evaluation/pretrain-t/profile.csv.parquet)
+for demonstration.
+To explore other results, simply upload a `.csv` or `.parquet` file through 
+`dataframe` tab in the web app interface.
+
+If you wish to run the evaluation pipeline yourself on provided data
+and pretrained models,
 
 ```bash
 python -m script.evaluation ckpt_load_path=ckpt/pretrain-t/epoch3885.ckpt
 python -m script.evaluation ckpt_load_path=ckpt/pretrain-h/last.ckpt
 ```
 
-If `data_save_fold` is not specified, the script assumes `ckpt_load_path` 
-follows the pattern `ckpt/$name/*.ckpt` and set `data_save_fold` to
-`data/evaluation/$name/` accordingly. 
+Note that if `data_save_fold` is not specified, the script assumes 
+`ckpt_load_path` follows the pattern `ckpt/$name/*.ckpt` and set 
+`data_save_fold` to `data/evaluation/$name/` accordingly. 
 Results are saved under `data_save_fold` including an updated `profile.csv`
-with appended UMAP and PCA coordinates, along with copies of `x.npy` and 
-`y.npy`.
+with appended UMAP and PCA coordinates.
 
-Since this project uses [Hydra](https://github.com/facebookresearch/hydra)
-for configuration management, additional parameters defined in
+Additional parameters defined in
 [`config/pipeline/evaluation.yaml`](config/pipeline/evaluation.yaml)
 can be overridden from command line through 
 [Hydra](https://github.com/facebookresearch/hydra)'s syntax.
@@ -191,3 +215,17 @@ python -m script.evaluation \
     data.data_load_fold=path/to/your/data/load/folder/ \
     data.batch_size=32
 ```
+
+## References
+
+1.  Garrett, A. *et al.* Speckle contrast optical spectroscopy for cuffless 
+    blood pressure estimation based on microvascular blood flow and volume 
+    oscillations. *Biomedical Optics Express* **16**, 3004–3016 (2025).
+    doi:[10.1364/BOE.560022](https://doi.org/10.1364/BOE.560022)
+
+2.  Yang, C., Westover, M. B. & Sun, J. BIOT: Cross-data biosignal learning in
+    the wild (2023). arXiv:[2305.10351](https://arxiv.org/abs/2305.10351)
+
+3.  Wang, Y., Li, T., Yan, Y., Song, W. & Zhang, X. How to evaluate your 
+    medical time series classification? (2024).
+    arXiv: [2410.03057](https://arxiv.org/pdf/2410.03057)

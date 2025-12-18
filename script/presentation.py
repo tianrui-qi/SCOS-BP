@@ -926,7 +926,9 @@ for j in range(num_cond):
         alpha=0.85,
     )
 
-    complete_facecolors = np.where(is_train_first_person, train_color, test_color)
+    complete_facecolors = np.where(
+        is_train_first_person, train_color, test_color
+    )
 
     ax_top.bar(
         x_pos,
@@ -1004,7 +1006,9 @@ for j in range(num_cond):
         linewidth=0,
         alpha=0.85,
     )
-    complete_facecolors = np.where(is_train_repeat_person, train_color, test_color)
+    complete_facecolors = np.where(
+        is_train_repeat_person, train_color, test_color
+    )
     ax_bottom.bar(
         x_pos,
         complete_cond,
