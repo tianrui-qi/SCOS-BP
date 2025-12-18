@@ -187,8 +187,8 @@ for demonstration.
 To explore other results, simply upload a `.csv` or `.parquet` file through 
 `dataframe` tab in the web app interface.
 
-If you wish to run the evaluation pipeline yourself on provided data
-and pretrained models,
+If you wish to run the [evaluation pipeline](script/evaluation.py) yourself 
+on provided data and pretrained models,
 
 ```bash
 python -m script.evaluation ckpt_load_path=ckpt/pretrain-t/epoch3885.ckpt
@@ -216,6 +216,102 @@ python -m script.evaluation \
     data.batch_size=32
 ```
 
+## Pretrain
+
+To reproduce the pretraining of provided models,
+
+```bash
+# pretrain configured by `config/pipeline/pretrain-t.yaml`
+python -m script.pretrain +pipeline=pretrain-t
+# pretrain configured by `config/pipeline/pretrain-h.yaml`
+python -m script.pretrain +pipeline=pretrain-h
+```
+
+We use [Hydra](https://github.com/facebookresearch/hydra)'s syntax to 
+define, manage, and override configuration parameters.
+All pretraining settings are defined declaratively in `.yaml` files under
+[`config/`](config/) and can be modified directly from the command line.
+For example, to reuse an existing configuration but change the batch size:
+
+```bash
+# pretrain configured by `config/pipeline/pretrain-t.yaml`
+python -m script.pretrain +pipeline=pretrain-t data.batch_size=32
+```
+
+To define a new experiment, create a new `.yaml` file under
+[`config/`](config/), for example `config/custom/experiment/01.yaml`,
+
+```yaml
+# @package _global_
+
+defaults:
+  - /schema/data@_here_
+  - /schema/model@_here_
+  - /schema/objective@_here_
+  - /schema/trainer@_here_
+  - _self_
+
+name: experiment/01
+
+data:
+  batch_size: 32
+```
+
+and launch pretraining with
+
+```bash
+python -m script.pretrain +custom=experiment/01
+```
+
+Note that training log and model checkpoints are automatically saved under
+`log/$name/` and `ckpt/$name/` respectively, where `$name` is defined in the
+configuration file. Remember to set different names for different experiments
+to avoid overwriting previous results.
+
+[Hydra](https://github.com/facebookresearch/hydra) also supports running 
+multiple experiments with parameter combinations via 
+[`hydra.mode=MULTIRUN`](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/).
+As an example, [`config/experiment/b/14.yaml`](config/experiment/b/14.yaml)
+defines a multi-run over `data.batch_size`.
+Please refer to [Hydra](https://github.com/facebookresearch/hydra)'s
+[documentation](https://hydra.cc/docs/intro/)
+for additional configuration features.
+
+We highly modularized the [pretraining pipeline](script/pretrain.py) into 
+four components: data, model, objective, and trainer.
+We strictly followed [PyTorch](https://github.com/pytorch/pytorch) and
+[PyTorch Lightning](https://github.com/Lightning-AI/pytorch-lightning) API
+in our implementation. More specifically,
+
+```
+src/
+├── data/
+│   ├── datamodule.py   # inherits: lightning.LightningDataModule
+│   └── dataset.py      # inherits: torch.utils.data.Dataset
+├── model/
+│   └── model.py        # inherits: torch.nn.Module
+├── objective/
+│   └── objective.py    # inherits: lightning.LightningModule
+└── trainer/
+    └── trainer.py      # wrapper:  lightning.Trainer
+```
+
+Thus, current pipeline can be easily modify and extended by following the 
+API. 
+Please check the implementation for more details.
+
+## Acknowledgements
+
+This project was developed by 
+[Tianrui Qi](https://www.linkedin.com/in/tianrui-qi/) during his Ph.D. lab 
+rotation in [Biomedical Optical Technologies Lab](https://www.bu.edu/botlab/)
+at Boston University.
+Thank [Dr. Darren Roblyer](https://www.linkedin.com/in/roblyer/) for hosting
+the rotation, and
+[Dr. Ariane Garrett](https://www.linkedin.com/in/ariane-garrett-800363157/)
+and [Ana Perez](https://www.linkedin.com/in/ana-perez-b7a297207/)
+for their support throughout the project.
+
 ## References
 
 1.  Garrett, A. *et al.* Speckle contrast optical spectroscopy for cuffless 
@@ -223,8 +319,8 @@ python -m script.evaluation \
     oscillations. *Biomedical Optics Express* **16**, 3004–3016 (2025).
     doi:[10.1364/BOE.560022](https://doi.org/10.1364/BOE.560022)
 
-2.  Yang, C., Westover, M. B. & Sun, J. BIOT: Cross-data biosignal learning in
-    the wild (2023). arXiv:[2305.10351](https://arxiv.org/abs/2305.10351)
+2.  Yang, C., Westover, M. B. & Sun, J. BIOT: Cross-data biosignal learning
+    in the wild (2023). arXiv:[2305.10351](https://arxiv.org/abs/2305.10351)
 
 3.  Wang, Y., Li, T., Yan, Y., Song, W. & Zhang, X. How to evaluate your 
     medical time series classification? (2024).
