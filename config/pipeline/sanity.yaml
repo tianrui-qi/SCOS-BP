@@ -3,10 +3,10 @@
 defaults:
   - /schema/data@_here_
   - /schema/model@_here_
-  - /schema/objective@_here_
   - _self_
 
 step: 1000
+lr: 0.005
 
 data:
   filter_level: All

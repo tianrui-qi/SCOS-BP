@@ -6,7 +6,7 @@ import torch
 from ..model import Model
 
 
-class Objective(lightning.LightningModule):
+class ObjectivePretrain(lightning.LightningModule):
     weight_train: torch.Tensor
     weight_validation: torch.Tensor
 
@@ -17,8 +17,7 @@ class Objective(lightning.LightningModule):
         freeze_embedding: bool, freeze_transformer: int, freeze_head: bool,
         # step
         task: dict[Literal[
-            "stepContrastive", "stepReconstruction", 
-            "stepRegression", "stepRegressionAdapter",
+            "stepContrastive", "stepReconstruction", "stepRegression", 
         ], float | None], 
         # stepContrastive
         T: float = 0.2,
@@ -27,10 +26,6 @@ class Objective(lightning.LightningModule):
         p_span_small: tuple[float, float] = (0.0, 0.5),
         p_span_large: tuple[float, float] = (0.0, 1.0),
         p_hide: float = 0.9, p_keep: float = 0.1,
-        # stepRegressionAdapter
-        K: int = 50,
-        weight_shape: float = 0.2, 
-        weight_min: float = 0.4, weight_max: float = 0.4,
         # optimizer
         lr: float = 0.005, step_size: int = 30, gamma: float = 0.98, 
         **kwargs,
@@ -68,11 +63,6 @@ class Objective(lightning.LightningModule):
         self.p_span_large = p_span_large
         self.p_hide = p_hide
         self.p_keep = p_keep
-        # stepRegressionAdapter
-        self.K = K
-        self.weight_shape = weight_shape
-        self.weight_min = weight_min
-        self.weight_max = weight_max
         # optimizer
         self.lr = lr
         self.step_size = step_size
@@ -153,51 +143,6 @@ class Objective(lightning.LightningModule):
         self.log(
             f"loss/stepRegression/{stage}", loss, 
             on_step=False, on_epoch=True, logger=True
-        )
-        return loss
-
-    def stepRegressionAdapter(self, batch, stage):
-        x, x_channel_idx, y = batch[:3]
-        x = (       # (B, T)
-            self.model.forwardRegressionAdapter(x, x_channel_idx)
-        )
-        loss_shape = torch.nn.functional.smooth_l1_loss(    # (B,)
-            input=torch.stack([             # (B, 2K+1, [K:-K])
-                torch.roll(x, shifts=s, dims=-1) 
-                for s in range(-self.K, self.K+1)
-            ], dim=1)[:, :, self.K:-self.K],
-            target=y.unsqueeze(1).expand(   # (B, 2K+1, [K:-K])
-                (-1, 2*self.K+1, -1)
-            )[:, :, self.K:-self.K],
-            reduction='none'
-        ).mean(dim=-1).min(dim=-1).values.mean()
-        loss_min   = torch.nn.functional.smooth_l1_loss(    # (B,)
-            x.min(dim=-1).values, y.min(dim=-1).values
-        )
-        loss_max   = torch.nn.functional.smooth_l1_loss(    # (B,)
-            x.max(dim=-1).values, y.max(dim=-1).values
-        )
-        loss = (
-            self.weight_shape * loss_shape +
-            self.weight_min * loss_min +
-            self.weight_max * loss_max
-        )
-        # log
-        self.log(
-            f"loss/stepRegressionAdapter/shape/{stage}", loss_shape,
-            on_step=False, on_epoch=True, logger=True,
-        )
-        self.log(
-            f"loss/stepRegressionAdapter/min/{stage}", loss_min,
-            on_step=False, on_epoch=True, logger=True,
-        )
-        self.log(
-            f"loss/stepRegressionAdapter/max/{stage}", loss_max,
-            on_step=False, on_epoch=True, logger=True,
-        )
-        self.log(
-            f"loss/stepRegressionAdapter/{stage}", loss,
-            on_step=False, on_epoch=True, logger=True,
         )
         return loss
 

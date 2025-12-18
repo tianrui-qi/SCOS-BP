@@ -58,12 +58,26 @@ def main(cfg: omegaconf.DictConfig) -> None:
         pathlib.Path(cfg.ckpt_load_path).parent.relative_to("ckpt").as_posix()
     ) if not cfg.data_save_fold else cfg.data_save_fold
     os.makedirs(data_save_fold, exist_ok=True)
-    profile_save_path = os.path.join(data_save_fold, "profile.csv.parquet")
-    # x_save_path = os.path.join(data_save_fold, "x.npy")
-    # y_save_path = os.path.join(data_save_fold, "y.npy")
-    data.profile.to_parquet(profile_save_path, index=False)
-    # np.save(x_save_path, data.x.detach().cpu().numpy())
-    # if cfg.data.y_as_y: np.save(y_save_path, data.y.detach().cpu().numpy())
+    # save profile as profile.csv
+    data.profile.to_csv(
+        os.path.join(data_save_fold, "profile.csv"), index=False
+    )
+    # save profile as profile.csv.parquet
+    data.profile.to_parquet(
+        os.path.join(data_save_fold, "profile.csv.parquet"), index=False
+    )
+    # save x as x.npy
+    np.save(
+        os.path.join(data_save_fold, "x.npy"), data.x.detach().cpu().numpy()
+    )
+    # save y as y.npy
+    if cfg.data.y_as_y: np.save(
+        os.path.join(data_save_fold, "y.npy"), data.y.detach().cpu().numpy()
+    )
+    # save representation as r.npy
+    np.save(
+        os.path.join(data_save_fold, "r.npy"), representation
+    )
 
 
 if __name__ == "__main__": main()

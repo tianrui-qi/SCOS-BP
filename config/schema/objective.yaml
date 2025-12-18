@@ -8,7 +8,6 @@ objective:
     stepContrastive: null
     stepReconstruction: null
     stepRegression: null
-    stepRegressionAdapter: null
   # stepContrastive
   T: 0.2
   # stepReconstruction
@@ -17,7 +16,7 @@ objective:
   p_span_large: [0.0, 1.0]  # channel > 1
   p_hide: 0.9
   p_keep: 0.1
-  # stepRegressionAdapter
+  # stepRegressionAdapter, stepAdapter
   K: 50
   weight_shape: 0.2
   weight_min: 0.4

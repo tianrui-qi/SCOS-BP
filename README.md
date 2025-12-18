@@ -2,7 +2,8 @@ Please check the project
 [presentation](https://cdn.jsdelivr.net/gh/tianrui-qi/SCOS-BP@main/asset/presentation.pdf)
 for a quick overview and web app at 
 [scos-bp.streamlit.app](https://scos-bp.streamlit.app)
-for interactive visualization of results.
+for interactive visualization of results 
+(may take a few seconds to load on first visit).
 
 ## Installation
 
@@ -145,76 +146,30 @@ for exact requirements.
 
 ## Model 
 
+The figure below illustrates backbone architecture of model.
+For more details, please refer to implement in
+[`src/model/model.py`](src/model/model.py).
+
+![Model](/asset/ModelBackbone.jpg)
+
 Two pretrained models checkpoints are provided on [OSF](https://osf.io/yqpht/)
 under `ckpt/`,
 
 -   `pretrain-t/epoch3885.ckpt`
     Model pretrained on unsupervised reconstruction task using optical
-    waveforms, configured by
-    [`config/pipeline/pretrain-t.yaml`](config/pipeline/pretrain-t.yaml).
+    waveforms. (stage 1)
 -   `pretrain-h/last.ckpt`
     Model further pretrained with supervised regression task using optical
-    waveforms and blood pressure waveforms, configured by
-    [`config/pipeline/pretrain-h.yaml`](config/pipeline/pretrain-h.yaml).
+    waveforms and blood pressure waveforms. (stage 2)
 
-The figure below illustrates backbone architecture of model.
-For more details, please refer to implement in
-[`src/model/model.py`](src/model/model.py).
+The figure below illustrates the complete three-stage training pipeline.
+Note that checkpoints for stage 3 are not provided, as this stage performs
+measurement-specific finetuning, where a separate model is trained for each
+measurement. This finetuning step is computationally lightweight and 
+typically completes within minutes. Please refer to
+[Finetune and Prediction](#finetune-and-prediction) section for details.
 
-![Model](/asset/Model.jpg)
-
-## Evaluation
-
-After representation learning, we compute representations for all samples and
-project them into a low-dimensional space using UMAP and PCA for 
-visualization. 
-We developed an web app at 
-[scos-bp.streamlit.app](https://scos-bp.streamlit.app) 
-using [Plotly](https://plotly.com/) for plotting,
-[Streamlit](https://streamlit.io/) as the frontend framework, and
-[Streamlit Community Cloud](https://streamlit.io/cloud) for deployment.
-You can also run the app locally by
-
-```bash
-streamlit run website/app.py
-```
-
-Results for two pretrained models are provided under 
-[`data/evaluation/`](data/evaluation/).
-By default, the web app will load results from 
-[`pretrain-t/profile.csv.parquet`](data/evaluation/pretrain-t/profile.csv.parquet)
-for demonstration.
-To explore other results, simply upload a `.csv` or `.parquet` file through 
-`dataframe` tab in the web app interface.
-
-If you wish to run the [evaluation pipeline](script/evaluation.py) yourself 
-on provided data and pretrained models,
-
-```bash
-python -m script.evaluation ckpt_load_path=ckpt/pretrain-t/epoch3885.ckpt
-python -m script.evaluation ckpt_load_path=ckpt/pretrain-h/last.ckpt
-```
-
-Note that if `data_save_fold` is not specified, the script assumes 
-`ckpt_load_path` follows the pattern `ckpt/$name/*.ckpt` and set 
-`data_save_fold` to `data/evaluation/$name/` accordingly. 
-Results are saved under `data_save_fold` including an updated `profile.csv`
-with appended UMAP and PCA coordinates.
-
-Additional parameters defined in
-[`config/pipeline/evaluation.yaml`](config/pipeline/evaluation.yaml)
-can be overridden from command line through 
-[Hydra](https://github.com/facebookresearch/hydra)'s syntax.
-For example, to evaluate custom data with a new model, adjust batch 
-size to fit your hardware, and save results to a specific directory:
-
-```bash
-python -m script.evaluation \
-    data_save_fold=path/to/your/data/save/folder/ \
-    ckpt_load_path=path/to/your/checkpoint.ckpt \
-    data.data_load_fold=path/to/your/data/load/folder/ \
-    data.batch_size=32
-```
+![Model](/asset/ModelTraining.jpg)
 
 ## Pretrain
 
@@ -263,11 +218,6 @@ and launch pretraining with
 python -m script.pretrain +custom=experiment/01
 ```
 
-Note that training log and model checkpoints are automatically saved under
-`log/$name/` and `ckpt/$name/` respectively, where `$name` is defined in the
-configuration file. Remember to set different names for different experiments
-to avoid overwriting previous results.
-
 [Hydra](https://github.com/facebookresearch/hydra) also supports running 
 multiple experiments with parameter combinations via 
 [`hydra.mode=MULTIRUN`](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/).
@@ -276,6 +226,15 @@ defines a multi-run over `data.batch_size`.
 Please refer to [Hydra](https://github.com/facebookresearch/hydra)'s
 [documentation](https://hydra.cc/docs/intro/)
 for additional configuration features.
+
+Note that training log and model checkpoints are automatically saved under
+`log/$name/` and `ckpt/$name/` respectively, where `$name` is defined in the
+configuration file. Remember to set different names for different experiments
+to avoid overwriting previous results. To check training log,
+
+```bash
+tensorboard --logdir log/
+```
 
 We highly modularized the [pretraining pipeline](script/pretrain.py) into 
 four components: data, model, objective, and trainer.
@@ -291,7 +250,7 @@ src/
 ├── model/
 │   └── model.py        # inherits: torch.nn.Module
 ├── objective/
-│   └── objective.py    # inherits: lightning.LightningModule
+│   └── pretrain.py     # inherits: lightning.LightningModule
 └── trainer/
     └── trainer.py      # wrapper:  lightning.Trainer
 ```
@@ -300,13 +259,112 @@ Thus, current pipeline can be easily modify and extended by following the
 API. 
 Please check the implementation for more details.
 
+## Evaluation
+
+After representation learning, we compute representations for all samples and
+project them into a low-dimensional space using UMAP and PCA for 
+visualization. 
+We developed an web app at 
+[scos-bp.streamlit.app](https://scos-bp.streamlit.app) 
+using [Plotly](https://plotly.com/) for plotting,
+[Streamlit](https://streamlit.io/) as the frontend framework, and
+[Streamlit Community Cloud](https://streamlit.io/cloud) for deployment.
+You can also run the app locally by
+
+```bash
+streamlit run website/app.py
+```
+
+Results for two pretrained models are provided under 
+[`data/evaluation/`](data/evaluation/).
+By default, the web app will load results from 
+[`pretrain-t/profile.csv.parquet`](data/evaluation/pretrain-t/profile.csv.parquet)
+for demonstration.
+To explore other results, simply upload a `.csv` or `.parquet` file through 
+`dataframe` tab in the web app interface.
+
+If you wish to run the [evaluation pipeline](script/evaluation.py) yourself 
+on provided data and pretrained models,
+
+```bash
+python -m script.evaluation ckpt_load_path=ckpt/pretrain-t/epoch3885.ckpt
+python -m script.evaluation ckpt_load_path=ckpt/pretrain-h/last.ckpt
+```
+
+If `data_save_fold` is not specified, the script assumes 
+`ckpt_load_path` follows the pattern `ckpt/$name/*.ckpt` and set 
+`data_save_fold` to `data/evaluation/$name/` accordingly. 
+Results are saved under `data_save_fold` including 
+-   `profile.csv` (for readability) and `profile.csv.parquet` (for 
+    visualization), an updated profile with appended UMAP/PCA coordinates.
+-   `r.npy` containing representations of samples.
+-   `x.npy` and `y.npy` with the same filtering
+    rules (controlled by `data.filter_level`) applied during evaluation
+    so that all outputs remain aligned in length and order.
+
+Additional parameters defined in
+[`config/pipeline/evaluation.yaml`](config/pipeline/evaluation.yaml)
+can be overridden from command line through 
+[Hydra](https://github.com/facebookresearch/hydra)'s syntax.
+For example, to evaluate custom data with a new model, adjust batch 
+size to fit your hardware, and save results to a specific directory:
+
+```bash
+python -m script.evaluation \
+    data_save_fold=path/to/your/data/save/folder/ \
+    ckpt_load_path=path/to/your/checkpoint.ckpt \
+    data.data_load_fold=path/to/your/data/load/folder/ \
+    data.batch_size=32
+```
+
+## Finetune and Prediction
+
+To perform measurement-specific finetuning and prediction using a pretrained
+model,
+
+```bash
+python -m script.downstream ckpt_load_path=ckpt/pretrain-h/last.ckpt
+```
+
+If `data_save_fold` is not specified, the script assumes 
+`ckpt_load_path` follows the pattern `ckpt/$name/*.ckpt` and set 
+`data_save_fold` to `data/downstream/$name/` accordingly. 
+Results are saved under `data_save_fold`, including 
+
+-   `z.npy` containing predicted blood pressure waveform. 
+-   `profile.csv`, `x.npy`, and `y.npy` with the same filtering rules 
+    (controlled by `data.filter_level`) applied during finetuning and 
+    prediction so that all outputs remain aligned in length and order.
+
+Additional parameters defined in
+[`config/pipeline/downstream.yaml`](config/pipeline/downstream.yaml)
+can be overridden from command line through 
+[Hydra](https://github.com/facebookresearch/hydra)'s syntax.
+
+This implementation serves as a reference for running the finetuning and
+prediction pipeline.
+Further hyperparameter tuning is required for optimal performance.
+
+## Open Questions
+
+-   Since the sample-level representations make sense right now, we could 
+    also visualize channel-level representations to see how different channels 
+    contribute to the final representation. 
+    This could provide a way to quantify the importance of each channel.
+-   Is it possible to use the stage-1 representations directly to predict
+    systolic and diastolic values, without any training on blood pressure
+    (i.e., skipping stages 2 and 3)? 
+    Note that this would only be feasible for systolic/diastolic values, 
+    since the model has not learned how to reconstruct the blood pressure 
+    waveform after stage-1 training.
+
 ## Acknowledgements
 
 This project was developed by 
 [Tianrui Qi](https://www.linkedin.com/in/tianrui-qi/) during his Ph.D. lab 
 rotation in [Biomedical Optical Technologies Lab](https://www.bu.edu/botlab/)
 at Boston University.
-Thank [Dr. Darren Roblyer](https://www.linkedin.com/in/roblyer/) for hosting
+Thanks [Dr. Darren Roblyer](https://www.linkedin.com/in/roblyer/) for hosting
 the rotation, and
 [Dr. Ariane Garrett](https://www.linkedin.com/in/ariane-garrett-800363157/)
 and [Ana Perez](https://www.linkedin.com/in/ana-perez-b7a297207/)

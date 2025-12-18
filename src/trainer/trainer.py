@@ -5,7 +5,7 @@ import lightning.pytorch.loggers
 import lightning.pytorch.callbacks
 import torch
 
-from ..objective import Objective
+from ..objective import ObjectivePretrain
 
 __all__ = ["Trainer"]
 
@@ -42,7 +42,7 @@ class Trainer:
         )
 
     def fit(
-        self, objective: Objective, 
+        self, objective: ObjectivePretrain, 
         datamodule: lightning.LightningDataModule
     ) -> None:
         if self.ckpt_load_path is not None and not self.resume:

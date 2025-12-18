@@ -15,7 +15,7 @@ lightning.seed_everything(42, workers=True, verbose=False)
 def main(cfg: omegaconf.DictConfig) -> None:
     data = src.DataModule(**cfg.data)
     model = src.Model(**cfg.model)
-    objective = src.Objective(model, **cfg.objective)
+    objective = src.ObjectivePretrain(model, **cfg.objective)
     trainer = src.Trainer(**cfg.trainer)
     trainer.fit(objective, datamodule=data)
 

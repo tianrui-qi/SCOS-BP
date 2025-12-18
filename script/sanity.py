@@ -28,7 +28,7 @@ def main(cfg: omegaconf.DictConfig) -> None:
     model = src.model.Model(**cfg.model).to(device)
     # train
     model.train()
-    opt = torch.optim.Adam(model.parameters(), lr=cfg.objective.lr)
+    opt = torch.optim.Adam(model.parameters(), lr=cfg.lr)
     for s in range(cfg.step):
         opt.zero_grad(set_to_none=True)
         pred, token = model.forwardReconstruction(x, x_channel_idx)
