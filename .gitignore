@@ -18,6 +18,16 @@
 /outputs/
 /multirun/
 
+# latex auxiliary files
+*.bbl
+*.blg
+*.aux
+*.fls
+*.log
+*.fdb_latexmk
+*.out
+*.synctex.gz
+
 # compile file
 **/.asv
 **/__pycache__/

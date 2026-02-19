@@ -1,6 +1,8 @@
 Please check the project 
 [presentation](https://cdn.jsdelivr.net/gh/tianrui-qi/SCOS-BP@main/asset/presentation.pdf)
-for a quick overview and web app at 
+for a quick overview, the 
+[manuscript](https://cdn.jsdelivr.net/gh/tianrui-qi/SCOS-BP@main/asset/manuscript.pdf)
+for a detailed description, and the web app at 
 [scos-bp.streamlit.app](https://scos-bp.streamlit.app)
 for interactive visualization of results 
 (may take a few seconds to load on first visit).
@@ -89,7 +91,7 @@ passes quality control for only two optical waveforms. Samples are retained
 even when some channels are missing; in such cases, missing channels are
 represented as NaNs in `x.npy` and `y.npy`.
 
-![DataPreparation](/asset/DataPreparation.jpg)
+![fig-DataPreparation](/asset/readme/fig-DataPreparation.jpg)
 
 A brief preview of `profile.csv`:
 
@@ -131,7 +133,7 @@ profile["pulse_norm"] = (profile.groupby("measurement")["pulse"].transform(
 The figure below summarizes samples with a valid blood pressure waveform and
 at least one valid optical waveform (n = 31,105),
 
-![DataProfile](/asset/DataProfile.jpg)
+![fig-DataProfile](/asset/readme/fig-DataProfile.jpg)
 
 To apply this project to your own data, the data should be organized into 
 the same three-file structure (`x.npy`, `y.npy`, and `profile.csv`).
@@ -150,7 +152,7 @@ The figure below illustrates backbone architecture of model.
 For more details, please refer to implement in
 [`src/model/model.py`](src/model/model.py).
 
-![Model](/asset/ModelBackbone.jpg)
+![fig-ModelArchitecture](/asset/readme/fig-ModelArchitecture.jpg)
 
 Two pretrained models checkpoints are provided on [OSF](https://osf.io/yqpht/)
 under `ckpt/`,
@@ -169,7 +171,7 @@ measurement. This finetuning step is computationally lightweight and
 typically completes within minutes. Please refer to
 [Finetune and Prediction](#finetune-and-prediction) section for details.
 
-![Model](/asset/ModelTraining.jpg)
+![fig-ModelTraining](/asset/readme/fig-ModelTraining.jpg)
 
 ## Pretrain
 
@@ -344,19 +346,6 @@ can be overridden from command line through
 This implementation serves as a reference for running the finetuning and
 prediction pipeline.
 Further hyperparameter tuning is required for optimal performance.
-
-## Open Questions
-
--   Since the sample-level representations make sense right now, we could 
-    also visualize channel-level representations to see how different channels 
-    contribute to the final representation. 
-    This could provide a way to quantify the importance of each channel.
--   Is it possible to use the stage-1 representations directly to predict
-    systolic and diastolic values, without any training on blood pressure
-    (i.e., skipping stages 2 and 3)? 
-    Note that this would only be feasible for systolic/diastolic values, 
-    since the model has not learned how to reconstruct the blood pressure 
-    waveform after stage-1 training.
 
 ## Acknowledgements
 
