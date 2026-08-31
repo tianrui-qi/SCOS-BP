@@ -350,7 +350,7 @@ Further hyperparameter tuning is required for optimal performance.
 ## Acknowledgements
 
 This project was developed by 
-[Tianrui Qi](https://www.linkedin.com/in/tianrui-qi/) during his Ph.D. lab 
+[Tianrui Qi](https://www.linkedin.com/in/tianrui-qi/) during his first Ph.D. lab 
 rotation in [Biomedical Optical Technologies Lab](https://www.bu.edu/botlab/)
 at Boston University.
 Thanks [Dr. Darren Roblyer](https://www.linkedin.com/in/roblyer/) for hosting
@@ -361,14 +361,8 @@ for their support throughout the project.
 
 ## References
 
-1.  Garrett, A. *et al.* Speckle contrast optical spectroscopy for cuffless 
-    blood pressure estimation based on microvascular blood flow and volume 
-    oscillations. *Biomedical Optics Express* **16**, 3004–3016 (2025).
-    doi:[10.1364/BOE.560022](https://doi.org/10.1364/BOE.560022)
+1.  Garrett, A. et al. [Speckle contrast optical spectroscopy for cuffless blood pressure estimation based on microvascular blood flow and volume oscillations.](https://doi.org/10.1364/BOE.560022) *Biomed. Opt. Express* **16**, 3004–3016 (2025).
 
-2.  Yang, C., Westover, M. B. & Sun, J. BIOT: Cross-data biosignal learning
-    in the wild (2023). arXiv:[2305.10351](https://arxiv.org/abs/2305.10351)
+2.  Yang, C., Westover, M. B. & Sun, J. [BIOT: Cross-data biosignal learning in the wild.](https://arxiv.org/abs/2305.10351) *arXiv* (2023).
 
-3.  Wang, Y., Li, T., Yan, Y., Song, W. & Zhang, X. How to evaluate your 
-    medical time series classification? (2024).
-    arXiv: [2410.03057](https://arxiv.org/pdf/2410.03057)
+3.  Wang, Y., Li, T., Yan, Y., Song, W. & Zhang, X. [How to evaluate your medical time series classification?](https://arxiv.org/abs/2410.03057v1) *arXiv* (2024).
