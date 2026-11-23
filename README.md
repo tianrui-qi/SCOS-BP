@@ -33,21 +33,20 @@ conda activate scos-bp
 
 ### Data and Pretrained Models
 
-All demonstrations in this README are based on data and pretrained model 
-checkpoints available on [OSF](https://osf.io/yqpht/). 
-You can download them from command line as follows
+The raw data and pretrained model checkpoints are shared through public
+iCloud Drive links. The five links and their destination paths are listed in
+[`config/pipeline/setup.yaml`](config/pipeline/setup.yaml).
+
+With the `scos-bp` environment active, run the following command from the
+repository root:
 
 ```bash
-# clone the OSF storage
-osf --project yqpht clone
-# merge OSF storage into the project root
-rsync -av --progress yqpht/osfstorage/ ./
-rm -r yqpht
+python -m script.setup
 ```
 
-If command `rsync` is not available on your system, you may use 
-`mv yqpht/osfstorage/* ./` instead but less safe. Make sure understand what
-these commands do before running them.
+The script downloads the three data files to `data/raw/` and the two model
+checkpoints to `ckpt/pretrain-t/` and `ckpt/pretrain-h/`. It skips files
+that already exist at their destination paths.
 
 ### Sanity Check
 
@@ -72,7 +71,8 @@ project.
 
 ## Data
 
-Three files are provided on [OSF](https://osf.io/yqpht/) under `data/raw/`,
+The [setup](#data-and-pretrained-models) downloads the following
+three files to `data/raw/`,
 
 -   `x.npy`
     Optical waveforms (33635 samples × 3 channels × 1000 time points), 
@@ -154,8 +154,8 @@ For more details, please refer to implement in
 
 ![fig-ModelArchitecture](/asset/readme/fig-ModelArchitecture.jpg)
 
-Two pretrained models checkpoints are provided on [OSF](https://osf.io/yqpht/)
-under `ckpt/`,
+The [setup](#data-and-pretrained-models) downloads two pretrained
+model checkpoints to `ckpt/`,
 
 -   `pretrain-t/epoch3885.ckpt`
     Model pretrained on unsupervised reconstruction task using optical

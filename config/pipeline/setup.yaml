@@ -1,0 +1,16 @@
+# @package _global_
+
+files:
+  # Raw waveforms and sample metadata
+  - path: data/raw/x.npy
+    link: "https://www.icloud.com/iclouddrive/051O3ICObNwfIJdBA246hx9Og"
+  - path: data/raw/y.npy
+    link: "https://www.icloud.com/iclouddrive/076H2603OWum4114ZEzGL-VNw"
+  - path: data/raw/profile.csv
+    link: "https://www.icloud.com/iclouddrive/0f6LgsJuUlHlnjBz-b3uEfEIw"
+
+  # Pretrained model checkpoints
+  - path: ckpt/pretrain-t/epoch3885.ckpt
+    link: "https://www.icloud.com/iclouddrive/055f3kbqcn0B5C8ObcxvDtliA"
+  - path: ckpt/pretrain-h/last.ckpt
+    link: "https://www.icloud.com/iclouddrive/0ccNG1rHAr-9gEXRDNmFEpRTA"
